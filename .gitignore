@@ -1,0 +1,12 @@
+# private working notes and raw captures — never public
+_private/
+
+# secrets / tokens
+**/token.json
+.env
+.env.*
+
+# deps / build
+node_modules/
+dist/
+.DS_Store
