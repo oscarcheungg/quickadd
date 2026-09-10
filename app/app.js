@@ -70,7 +70,7 @@ const playlistRowHTML = (p, attr = "data-open-playlist") => `<div class="row tap
     <div class="meta"><div class="title ${p.id === S.target ? "in-target" : ""}">${esc(p.name)}</div><div class="sub">${p.total} song${p.total === 1 ? "" : "s"}${p.lastAdded ? ` · edited ${ago(new Date(p.lastAdded).toISOString())}` : ""}</div></div><span class="chev">›</span></div>`;
 const artistCardHTML = (a) => `<button class="artist" data-open-artist="${esc(a.id)}"><div class="avatar">${esc(initials(a.name))}</div><div class="name">${esc(a.name)}</div><div class="count">${a.uris.size} saved</div></button>`;
 const headHTML = (title, withBack, right = "") => withBack
-  ? `<div class="head stacked"><button class="back" data-back>‹ Back</button><h1>${esc(title)}</h1></div>`
+  ? `<div class="head stacked"><button class="back" data-back aria-label="Back">‹</button><h1>${esc(title)}</h1></div>`
   : `<div class="head"><h1>${esc(title)}</h1>${right}</div>`;
 function segHTML() {
   const n = S.selection.length, t = target(), isReview = S.screen.name === "review";
@@ -217,7 +217,7 @@ function sheetHTML() {
 function render() {
   const sc = S.screen;
   if (sc.name === "start") { $app.innerHTML = startHTML(); return; }
-  if (sc.name === "new") { $app.innerHTML = `<div class="head stacked"><button class="back" data-back>‹ Back</button></div>` + newHTML(); document.getElementById("pname")?.focus(); return; }
+  if (sc.name === "new") { $app.innerHTML = `<div class="head stacked"><button class="back" data-back aria-label="Back">‹</button></div>` + newHTML(); document.getElementById("pname")?.focus(); return; }
   if (sc.name === "existing") { $app.innerHTML = headHTML("Your playlists", true) + existingHTML(); return; }
   if (!target()) { S.screen = { name: "start" }; S.stack = []; return render(); }
   const titles = { home: "Playlist Mode", search: "Search", playlist: D.playlist(sc.id)?.name || "Playlist", artist: lib.artists.get(sc.id)?.name || "Artist", artists: "Your artists", playlists: "Your playlists", recents: "Recently played", review: "Playlist Mode" };

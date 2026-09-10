@@ -17,8 +17,9 @@ input { font: inherit; }
 /* header */
 .head { padding: calc(16px + var(--safe-t)) 16px 6px; display: flex; align-items: center; gap: 12px; }
 .head h1 { font-size: 22px; margin: 0; flex: 1; font-weight: 700; letter-spacing: -0.2px; }
-.head .back { font-size: 15px; font-weight: 600; color: var(--muted); padding: 6px 0; }
-.head.stacked { flex-direction: column; align-items: flex-start; gap: 2px; padding-bottom: 8px; }
+.head .back { font-size: 34px; line-height: 1; font-weight: 500; color: #fff; width: 44px; height: 44px; margin-left: -12px; display: grid; place-items: center; border-radius: 22px; }
+.head .back:active { background: var(--row); }
+.head.stacked { flex-direction: column; align-items: flex-start; gap: 0; padding-bottom: 8px; }
 .head.stacked h1 { font-size: 28px; }
 .body.centered { display: flex; flex-direction: column; justify-content: center; gap: 14px; padding: 0 0 140px; }
 .body.centered h1 { font-size: 28px; margin: 0 16px; font-weight: 700; }
