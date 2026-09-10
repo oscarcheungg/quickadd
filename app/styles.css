@@ -41,10 +41,9 @@ input { font: inherit; }
 .seg button.on.target { color: var(--green); }
 
 /* body */
-.body { flex: 1; overflow-y: auto; padding-bottom: 96px; }
-.body > :first-child { margin-top: var(--stack); }
+.body { flex: 1; overflow-y: auto; padding: var(--stack) 0 96px; }
 .section { display: flex; align-items: center; gap: var(--s3); padding: var(--section) var(--gutter) var(--s2); font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.3px; text-transform: uppercase; }
-.body > .section:first-child { padding-top: 0; margin-top: var(--stack); }
+.body > .section:first-child { padding-top: 0; }
 .section .spacer { flex: 1; }
 .section button { color: var(--green); text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 700; }
 .field { margin: 0 var(--gutter); background: var(--panel); border-radius: 10px; display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s3); }
