@@ -13,4 +13,4 @@ http.createServer((req, res) => {
   if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end("not found"); return; }
   res.writeHead(200, { "Content-Type": TYPES[path.extname(file)] || "application/octet-stream", "Cache-Control": "no-store" });
   fs.createReadStream(file).pipe(res);
-}).listen(PORT, "127.0.0.1", () => console.log(`Quick Add dev server: http://127.0.0.1:${PORT}`));
+}).listen(PORT, "127.0.0.1", () => console.log(`Playlist Mode dev server: http://127.0.0.1:${PORT}`));

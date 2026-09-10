@@ -84,7 +84,7 @@ const searchFieldHTML = (q) => `<div class="field"><span class="muted">⌕</span
 // ---------- entry: choose what to build ----------
 function startHTML() {
   const name = (lib.me?.display_name || "").split(" ")[0];
-  return `<div class="splash start"><p class="eyebrow">Quick Add</p><h1>Hello, ${esc(name || "there")}!</h1><p>What are you creating today?</p>
+  return `<div class="splash start"><p class="eyebrow">Playlist Mode</p><h1>Hello, ${esc(name || "there")}!</h1><p>What are you creating today?</p>
     <div class="start-actions">
       <button class="btn green" data-action="start-new">＋ New playlist</button>
       <button class="btn" data-action="start-existing">Add to an existing playlist</button>
@@ -219,7 +219,7 @@ function render() {
   if (sc.name === "new") { $app.innerHTML = headHTML("New playlist", true) + newHTML(); document.getElementById("pname")?.focus(); return; }
   if (sc.name === "existing") { $app.innerHTML = headHTML("Add to a playlist", true) + existingHTML(); return; }
   if (!target()) { S.screen = { name: "start" }; S.stack = []; return render(); }
-  const titles = { home: "Quick Add", search: "Search", playlist: D.playlist(sc.id)?.name || "Playlist", artist: lib.artists.get(sc.id)?.name || "Artist", artists: "Your artists", playlists: "Your playlists", recents: "Recently played", review: "Quick Add" };
+  const titles = { home: "Playlist Mode", search: "Search", playlist: D.playlist(sc.id)?.name || "Playlist", artist: lib.artists.get(sc.id)?.name || "Artist", artists: "Your artists", playlists: "Your playlists", recents: "Recently played", review: "Playlist Mode" };
   const bodies = { home: homeHTML, search: searchHTML, playlist: playlistHTML, artist: artistHTML, artists: artistsHTML, playlists: playlistsHTML, recents: recentsHTML, review: reviewHTML };
   const withBack = !["home", "review"].includes(sc.name);
   const right = withBack ? "" : `<button class="kbd" data-action="settings" title="Claude API key">⚙︎</button><button class="kbd" data-action="reload" title="Reload library">↻</button>`;
@@ -338,8 +338,8 @@ async function pollNowPlaying() {
 // ---------- boot ----------
 function splash(html) { $app.innerHTML = `<div class="splash">${html}</div>`; }
 async function boot(force = false) {
-  try { await handleCallback(); } catch (e) { splash(`<h1>Quick Add</h1><p>Login failed: ${esc(e.message)}</p><button class="btn green" data-login>Try again</button>`); return; }
-  if (!getStoredToken()) { splash(`<h1>Quick Add</h1><p>Build playlists from the music you already have, with a little help. Pick a playlist once, then every song is one tap.</p><button class="btn green" data-login>Log in with Spotify</button>`); return; }
+  try { await handleCallback(); } catch (e) { splash(`<h1>Playlist Mode</h1><p>Login failed: ${esc(e.message)}</p><button class="btn green" data-login>Try again</button>`); return; }
+  if (!getStoredToken()) { splash(`<h1>Playlist Mode</h1><p>Build playlists from the music you already have, with a little help. Pick a playlist once, then every song is one tap.</p><button class="btn green" data-login>Log in with Spotify</button>`); return; }
   const cached = !force && D.loadCache();
   if (!cached || D.isStale()) {
     splash(`<h1>Loading your library</h1><p id="pl">Reading your playlists…</p><div class="progress"><div id="pb" style="width:0%"></div></div>`);

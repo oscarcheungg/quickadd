@@ -1,8 +1,8 @@
-# Quick Add
+# Playlist Mode
 
 A faster way to build Spotify playlists from the music you already have.
 
-Most playlists get built from other playlists. In Spotify that means opening a playlist, tapping the three-dot menu on a song, choosing "Add to playlist," scrolling to find the right one, and repeating for every song. Quick Add puts your whole library on one screen: pick the playlist you're building once, then select songs from any of your playlists, what's playing now, your recent plays, or search, and move them over in batches. Publish writes the result straight to Spotify.
+Most playlists get built from other playlists. In Spotify that means opening a playlist, tapping the three-dot menu on a song, choosing "Add to playlist," scrolling to find the right one, and repeating for every song. Playlist Mode puts your whole library on one screen: pick the playlist you're building once, then select songs from any of your playlists, what's playing now, your recent plays, or search, and move them over in batches. Publish writes the result straight to Spotify.
 
 ## Status
 

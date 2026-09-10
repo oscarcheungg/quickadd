@@ -164,7 +164,7 @@ export function libraryRecs(targetId, n = 12) {
 }
 
 export async function createPlaylist(name) {
-  const p = await api("/me/playlists", { method: "POST", body: { name, public: false, description: "Built with Quick Add" } });
+  const p = await api("/me/playlists", { method: "POST", body: { name, public: false, description: "Built with Playlist Mode" } });
   const entry = { id: p.id, name: p.name, image: "", ownerId: lib.me?.id, mine: true, total: 0, lastAdded: Date.now(), tracks: [] };
   lib.playlists.unshift(entry); save();
   return entry;
