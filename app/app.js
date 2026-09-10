@@ -78,8 +78,8 @@ function segHTML() {
 }
 function ctaHTML() {
   const n = S.selection.length, t = target();
-  if (S.screen.name === "review") { const k = newCount(); return `<div class="cta">${n ? `<button class="btn ghost" data-action="discard">Discard ${n}</button>` : ""}<button class="btn green" data-action="publish" ${k ? "" : "disabled"}>${k ? `Publish ${k} to Spotify` : "Nothing new to publish"}</button></div>`; }
-  return `<div class="cta"><button class="btn" data-action="review" ${n ? "" : "disabled"}>${n ? `Review ${n} in ${esc(t?.name)} →` : `Tap + on songs to add to ${esc(t?.name)}`}</button></div>`;
+  if (S.screen.name === "review") { const k = newCount(); return `<div class="cta">${n ? `<button class="btn ghost" data-action="discard">Discard ${n}</button>` : ""}<button class="btn green" data-action="publish" ${k ? "" : "disabled"}>${k ? `Publish ${k} to Spotify` : "Nothing to publish"}</button></div>`; }
+  return `<div class="cta"><button class="btn" data-action="review" ${n ? "" : "disabled"}>${n ? `Review ${n} in ${esc(t?.name)} →` : `Add songs`}</button></div>`;
 }
 const searchFieldHTML = (q) => `<div class="field search"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><input id="q" type="search" placeholder="What's on your mind?" value="${esc(q)}" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">${q ? `<button class="clear" data-action="clearq">✕</button>` : ""}</div>`;
 
@@ -151,7 +151,7 @@ function searchHTML() {
   return `${searchFieldHTML(q)}
     ${res.artists.length ? section("Artists") + `<div class="hscroll">${res.artists.map(a => `<button class="artist" data-open-catalog-artist="${esc(a.id)}"><div class="avatar">${a.image ? `<img src="${esc(a.image)}" alt="">` : esc(initials(a.name))}</div><div class="name">${esc(a.name)}</div></button>`).join("")}</div>` : ""}
     ${section(res.tracks.length ? `Songs · ${res.tracks.length}` : "Songs", selectable.length > 1 ? { id: "selectall", label: `Select all ${selectable.length}` } : null)}
-    <div id="catalog">${res.tracks.length ? res.tracks.map(t => rowHTML(t, { sub: artists(t) })).join("") : ready ? `<div class="empty">No results on Spotify for “${esc(q)}”.</div>` : `<div class="empty">Searching Spotify…</div>`}</div>
+    <div id="catalog">${res.tracks.length ? res.tracks.map(t => rowHTML(t, { sub: artists(t) })).join("") : ready ? `<div class="empty">Couldn’t find “${esc(q)}”</div>` : `<div class="empty">Searching…</div>`}</div>
     ${ready && res.tracks.length >= 10 && !res.done ? `<div class="more"><button class="chip" data-action="more-results">${res.loading ? "Loading…" : "More results"}</button></div>` : ""}`;
 }
 function catalogArtistHTML() {
@@ -159,7 +159,7 @@ function catalogArtistHTML() {
   const selectable = (tracks || []).filter(t => !inTarget(t.uri) && !isSelected(t.uri));
   return `<div class="thead">${a.image ? `<img class="art" style="border-radius:50%" src="${esc(a.image)}" alt="">` : `<div class="art"></div>`}<div class="meta"><div class="title">${esc(a.name)}</div><div class="sub">Popular on Spotify</div></div></div>
     ${section("Top songs", selectable.length > 1 ? { id: "selectall", label: `Select all ${selectable.length}` } : null)}
-    ${tracks ? (tracks.length ? tracks.map(t => rowHTML(t, { sub: t.album })).join("") : `<div class="empty">No songs found.</div>`) : `<div class="empty">Loading…</div>`}`;
+    ${tracks ? (tracks.length ? tracks.map(t => rowHTML(t, { sub: t.album })).join("") : `<div class="empty">No songs</div>`) : `<div class="empty">Loading…</div>`}`;
 }
 function playlistHTML() {
   const p = D.playlist(S.screen.id); if (!p) return `<div class="empty">Playlist not found.</div>`;
@@ -182,7 +182,7 @@ function artistHTML() {
 }
 const artistsHTML = () => `${section("By songs saved")}${D.topArtists(200).map(a => `<div class="row tappable" data-open-artist="${esc(a.id)}"><div class="art round" style="display:grid;place-items:center;font-weight:700;color:var(--muted)">${esc(initials(a.name))}</div><div class="meta"><div class="title">${esc(a.name)}</div><div class="sub">${a.uris.size} saved</div></div><span class="chev">›</span></div>`).join("")}`;
 const playlistsHTML = () => `${section("Last edited first")}${lib.playlists.map(p => playlistRowHTML(p)).join("")}`;
-const recentsHTML = () => S.recents.length ? `${section("Last 50 plays")}${S.recents.map(t => rowHTML(t, { sub: `${artists(t)} · ${ago(t.playedAt)}` })).join("")}` : `<div class="empty">Nothing played recently.</div>`;
+const recentsHTML = () => S.recents.length ? `${section("Last 50 plays")}${S.recents.map(t => rowHTML(t, { sub: `${artists(t)} · ${ago(t.playedAt)}` })).join("")}` : `<div class="empty">No recent plays</div>`;
 
 // ---------- review ----------
 function reviewHTML() {
@@ -193,9 +193,9 @@ function reviewHTML() {
       <div class="meta"><div class="title">${esc(p.name)}</div><div class="sub">${p.total + newCount()} songs · ${fmtDur(total)}${S.selection.length ? ` · ${newCount()} unpublished` : ""}</div></div>
       <button class="switch" data-action="switch">Switch</button></div>
     ${dupes.map(s => `<div class="banner amber"><span>⚠︎ ${esc(s.track.name)} is already in this playlist</span><span class="spacer"></span><button data-keep="${esc(s.uri)}">Keep both</button><button data-remove="${esc(s.uri)}">Skip</button></div>`).join("")}
-    ${S.selection.length ? section(`New · ${S.selection.length} · drag to reorder, ✕ to remove`) + `<div id="newlist">${S.selection.map(s => rowHTML(s.track, { mode: "review", sub: `${artists(s.track)} · from ${s.source}`, trail: inTarget(s.uri) ? { text: S.keep.has(s.uri) ? "dupe, keeping" : "dupe", cls: "amber" } : { text: "new", cls: "green" } })).join("")}</div>` : `<div class="empty">Nothing selected yet. Go to Find and tap + on any song.</div>`}
+    ${S.selection.length ? section(`New · ${S.selection.length} · drag to reorder, ✕ to remove`) + `<div id="newlist">${S.selection.map(s => rowHTML(s.track, { mode: "review", sub: `${artists(s.track)} · from ${s.source}`, trail: inTarget(s.uri) ? { text: S.keep.has(s.uri) ? "dupe, keeping" : "dupe", cls: "amber" } : { text: "new", cls: "green" } })).join("")}</div>` : `<div class="empty">Let’s find something for your playlist</div>`}
     ${section(`Already in ${p.name} · ${existing.length}`)}
-    ${existing.length ? existing.map(t => rowHTML(t, { mode: "plain", sub: artists(t) })).join("") : `<div class="empty">Empty playlist so far.</div>`}`;
+    ${existing.length ? existing.map(t => rowHTML(t, { mode: "plain", sub: artists(t) })).join("") : `<div class="empty">No songs yet</div>`}`;
 }
 
 // ---------- sheets ----------
