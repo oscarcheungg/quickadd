@@ -1,7 +1,7 @@
 {
   "name": "Playlist Mode",
   "short_name": "Playlist Mode",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#121212",
   "theme_color": "#121212",

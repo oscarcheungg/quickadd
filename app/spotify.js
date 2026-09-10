@@ -1,6 +1,9 @@
 // Spotify auth (PKCE, no secret) + a small API helper.
 export const CLIENT_ID = "e791b3aef59b4eeab94c1984073ce632";
-const REDIRECT_URI = location.origin + "/callback";
+// Redirect back to wherever the app is served from (works locally and on GitHub Pages).
+// Register BOTH of these in the Spotify dashboard: http://127.0.0.1:8888/  and  https://<user>.github.io/<repo>/
+export const BASE_PATH = location.pathname.replace(/[^/]*$/, "");
+const REDIRECT_URI = location.origin + BASE_PATH;
 const SCOPES = ["user-read-currently-playing","user-read-recently-played","user-top-read","playlist-read-private","playlist-read-collaborative","playlist-modify-public","playlist-modify-private","ugc-image-upload"].join(" ");
 const TOKEN_KEY = "qa.token";
 
@@ -24,11 +27,11 @@ export async function login() {
 
 // Call on page load. Returns true if we just finished a login.
 export async function handleCallback() {
-  if (location.pathname !== "/callback") return false;
   const q = new URLSearchParams(location.search);
+  if (!q.has("code") && !q.has("error")) return false;
   const saved = JSON.parse(sessionStorage.getItem("qa.pkce") || "null");
   sessionStorage.removeItem("qa.pkce");
-  history.replaceState(null, "", "/");
+  history.replaceState(null, "", BASE_PATH);
   if (!saved || q.get("state") !== saved.state || q.get("error")) throw new Error(q.get("error") || "Login state mismatch");
   const res = await fetch("https://accounts.spotify.com/api/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ client_id: CLIENT_ID, grant_type: "authorization_code", code: q.get("code"), redirect_uri: REDIRECT_URI, code_verifier: saved.verifier }) });
