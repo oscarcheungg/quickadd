@@ -68,7 +68,7 @@ const section = (label, action) => `<div class="section"><span>${esc(label)}</sp
 const playlistRowHTML = (p, attr = "data-open-playlist") => `<div class="row tappable" ${attr}="${esc(p.id)}">${p.image ? `<img class="art" src="${esc(p.image)}" alt="">` : `<div class="art"></div>`}
     <div class="meta"><div class="title ${p.id === S.target ? "in-target" : ""}">${esc(p.name)}</div><div class="sub">${p.total} song${p.total === 1 ? "" : "s"}${p.lastAdded ? ` · edited ${ago(new Date(p.lastAdded).toISOString())}` : ""}</div></div><span class="chev">›</span></div>`;
 const artistCardHTML = (a) => `<button class="artist" data-open-artist="${esc(a.id)}"><div class="avatar">${esc(initials(a.name))}</div><div class="name">${esc(a.name)}</div><div class="count">${a.uris.size} saved</div></button>`;
-const bannerHTML = () => { const p = target(); return p ? `<div class="mode-banner"><span class="dot"></span><span class="label">Playlist Mode</span><span class="spacer"></span><span class="name">${esc(p.name)}</span><span class="count">· ${p.total + newCount()} song${p.total + newCount() === 1 ? "" : "s"}</span></div>` : ""; };
+const bannerHTML = () => { const p = target(); return p ? `<div class="mode-banner"><span class="label">Adding to</span><span class="name">${esc(p.name)}</span><span class="spacer"></span><span class="count">${p.total + newCount()} song${p.total + newCount() === 1 ? "" : "s"}</span></div>` : ""; };
 const headHTML = (title, withBack, right = "") => withBack
   ? `<div class="head stacked"><button class="back" data-back aria-label="Back">‹</button><h1>${esc(title)}</h1></div>`
   : `<div class="head"><h1>${esc(title)}</h1>${right}</div>`;
