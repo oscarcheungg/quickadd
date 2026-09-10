@@ -195,3 +195,12 @@ input { font: inherit; }
 .pmeta .meta-link { color: var(--muted); font-weight: 600; padding: 6px 0; }
 .pmeta .meta-link:active { color: var(--text); }
 .pmeta .dot { opacity: 0.6; }
+
+/* add a list */
+.list-link { display: block; margin: var(--s2) var(--gutter) 0; color: var(--muted); font-size: 13px; font-weight: 600; }
+.body.list { padding-left: var(--gutter); padding-right: var(--gutter); }
+textarea#songlist { width: 100%; background: var(--panel); border: 0; border-radius: 10px; color: var(--text); font: inherit; font-size: 16px; line-height: 1.5; padding: var(--s3); outline: none; resize: vertical; }
+textarea#songlist::placeholder { color: var(--muted); }
+.body.list .kbd { margin: var(--s2) 0 0; }
+.row .link-muted { color: var(--green); font-weight: 700; padding: 8px 0 8px 8px; }
+.row.alt { padding-left: 40px; opacity: 0.85; }

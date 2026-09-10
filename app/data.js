@@ -267,3 +267,32 @@ export async function recommend(targetId, { recents = [], top = [] } = {}, n = 1
   }
   recCache.set(key, out); return out;
 }
+
+// ---------- "add a list": resolve free text into tracks ----------
+// Accepts lines or comma-separated entries like "title", "title - artist", "title by artist", "title (artist)".
+export function parseSongList(text) {
+  return text.split(/\n|,|;/).map(l => l.replace(/^\s*(\d+[.)]|[-*•])\s*/, "").trim()).filter(Boolean).map(raw => {
+    let m = raw.match(/^(.*?)\s+(?:-|–|—|by)\s+(.+)$/i); if (m) return { raw, title: m[1].trim(), artist: m[2].trim() };
+    m = raw.match(/^(.*?)\s*\((.+)\)\s*$/); if (m) return { raw, title: m[1].trim(), artist: m[2].trim() };
+    return { raw, title: raw, artist: "" };
+  });
+}
+async function searchFew(q) { const r = await api(`/search?q=${encodeURIComponent(q)}&type=track&limit=5`); return (r?.tracks?.items || []).map(slimTrack); }
+// Returns [{entry, candidates:[track...], pick: track|null}] — pick is the best guess.
+export async function resolveSongList(entries, onOne) {
+  const out = new Array(entries.length); let i = 0;
+  async function worker() {
+    while (i < entries.length) {
+      const idx = i++; const e = entries[idx];
+      let cands = [];
+      try {
+        if (e.artist) cands = await searchFew(`track:${e.title} artist:${e.artist}`);
+        if (!cands.length) cands = await searchFew(e.artist ? `${e.title} ${e.artist}` : e.title);
+      } catch {}
+      out[idx] = { entry: e, candidates: cands, pick: cands[0] || null };
+      onOne?.(idx, out[idx]);
+    }
+  }
+  await Promise.all([worker(), worker(), worker()]);
+  return out;
+}

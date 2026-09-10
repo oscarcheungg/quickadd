@@ -11,6 +11,7 @@ const S = {
   keep: new Set(),
   nowPlaying: null, recents: [], catalog: { tracks: [], artists: [] }, catalogQ: "",
   ai: { status: "idle", items: [], error: "", forTarget: null, dismissed: new Set() }, // parked
+  list: { text: "", entries: [], results: null, open: null, busy: false },
   recs: { status: "idle", items: [], key: null }, top: [],
   lastPublish: null, sheet: null, dragFrom: null,
 };
@@ -104,6 +105,7 @@ function existingHTML() { return `<div class="body">${lib.playlists.filter(p => 
 // ---------- home: suggestions ----------
 function homeHTML() {
   return `${searchFieldHTML("")}
+    <button class="list-link" data-action="add-list">Or add a list of songs</button>
     <div class="tiles">
       <button class="tile" data-action="playlists"><span class="tile-icon">☰</span><span class="tile-name">Your playlists</span><span class="tile-sub">${lib.playlists.length}</span></button>
       <button class="tile" data-action="recents"><span class="tile-icon">↺</span><span class="tile-name">Recently played</span><span class="tile-sub">${S.recents.length || "…"}</span></button>
@@ -221,6 +223,31 @@ function reviewHTML() {
     ${existing.length ? section(`In this playlist · ${existing.length}`) + existing.map(t => rowHTML(t, { mode: "plain", sub: artists(t) })).join("") : ""}`;
 }
 
+// ---------- add a list of songs ----------
+function listHTML() {
+  const L = S.list;
+  if (!L.results) return `<div class="body has-cta list">
+      <textarea id="songlist" placeholder="One song per line, or separated by commas&#10;life goes on&#10;dynamite by bts&#10;bittersweet - keshi" rows="8">${esc(L.text || "")}</textarea>
+      <p class="kbd">Titles alone work. Adding the artist helps when a title is common.</p>
+    </div>
+    <div class="cta"><button class="btn green" data-action="resolve-list" ${(L.text || "").trim() ? "" : "disabled"}>${L.busy ? "Finding songs…" : "Find songs"}</button></div>`;
+  const rows = L.results.map((r, i) => {
+    if (!r) return `<div class="row"><div class="art"></div><div class="meta"><div class="title muted">${esc(L.entries[i].raw)}</div><div class="sub">Searching…</div></div></div>`;
+    if (!r.pick) return `<div class="row"><div class="art"></div><div class="meta"><div class="title muted">${esc(r.entry.raw)}</div><div class="sub">Couldn’t find this one</div></div></div>`;
+    const t = r.pick; const open = L.open === i; const alts = r.candidates.filter(c => c.uri !== t.uri).slice(0, 3);
+    return `<div class="row tappable" data-list-toggle="${i}">
+        <span class="check ${r.on ? "on" : ""}">${r.on ? "✓" : ""}</span>
+        ${t.image ? `<img class="art" src="${esc(t.image)}" alt="">` : `<div class="art"></div>`}
+        <div class="meta"><div class="title ${inTarget(t.uri) ? "in-target" : ""}">${esc(t.name)}</div><div class="sub">${esc(artists(t))}${inTarget(t.uri) ? ` · already in ${esc(target()?.name)}` : ""}</div></div>
+        ${alts.length ? `<button class="trail link-muted" data-list-alts="${i}">${open ? "Close" : "Not it?"}</button>` : ""}
+      </div>
+      ${open ? alts.map(c => `<div class="row tappable alt" data-list-pick="${i}:${esc(c.uri)}"><span class="check"></span>${c.image ? `<img class="art" src="${esc(c.image)}" alt="">` : `<div class="art"></div>`}<div class="meta"><div class="title">${esc(c.name)}</div><div class="sub">${esc(artists(c))}</div></div></div>`).join("") : ""}`;
+  }).join("");
+  const n = L.results.filter(r => r?.pick && r.on && !inTarget(r.pick.uri)).length;
+  return `<div class="body has-cta">${section(`${L.results.filter(Boolean).length} of ${L.entries.length} found`, { id: "list-edit", label: "Edit list" })}${rows}</div>
+    <div class="cta"><button class="btn green" data-action="list-add" ${n ? "" : "disabled"}>Add ${n || ""} to ${esc(target()?.name)}</button></div>`;
+}
+
 // ---------- edit playlist (full screen, Spotify-style) ----------
 function editHTML() {
   const p = target(); const e = S.edit || {}; const canCover = hasScope("ugc-image-upload");
@@ -252,6 +279,7 @@ function render() {
   const sc = S.screen;
   if (sc.name === "start") { $app.innerHTML = startHTML(); return; }
   if (sc.name === "new") { $app.innerHTML = `<div class="head stacked"><button class="back" data-back aria-label="Back">‹</button></div>` + newHTML(); document.getElementById("pname")?.focus(); return; }
+  if (sc.name === "list") { $app.innerHTML = headHTML("Add a list", true) + listHTML(); if (!S.list.results) document.getElementById("songlist")?.focus(); return; }
   if (sc.name === "existing") { $app.innerHTML = headHTML("Your playlists", true) + existingHTML(); return; }
   if (!target()) { S.screen = { name: "start" }; S.stack = []; return render(); }
   const titles = { home: "Playlist Mode", search: "Search", playlist: D.playlist(sc.id)?.name || "Playlist", artist: lib.artists.get(sc.id)?.name || "Artist", "catalog-artist": sc.artist?.name || "Artist", artists: "Your artists", playlists: "Your playlists", recents: "Recently played", review: "Playlist Mode" };
@@ -274,7 +302,7 @@ function lazyArtistImages() { for (const el of $app.querySelectorAll("[data-arti
 
 // ---------- events ----------
 $app.addEventListener("click", async (e) => {
-  const t = e.target.closest("[data-select],[data-deselect],[data-toggle],[data-remove],[data-keep],[data-dismiss],[data-visibility],[data-open-playlist],[data-open-artist],[data-open-catalog-artist],[data-set-target],[data-chip],[data-back],[data-action]");
+  const t = e.target.closest("[data-select],[data-deselect],[data-toggle],[data-remove],[data-keep],[data-dismiss],[data-visibility],[data-list-alts],[data-list-pick],[data-list-toggle],[data-open-playlist],[data-open-artist],[data-open-catalog-artist],[data-set-target],[data-chip],[data-back],[data-action]");
   if (!t) return;
   const d = t.dataset;
   const trackOf = (uri) => D.track(uri) || S.recents.find(x => x.uri === uri) || S.catalog.tracks.find(x => x.uri === uri) || (S.screen.tracks || []).find(x => x.uri === uri) || S.ai.items.find(x => x.uri === uri) || (S.nowPlaying?.track.uri === uri ? S.nowPlaying.track : null);
@@ -284,6 +312,9 @@ $app.addEventListener("click", async (e) => {
   if (d.toggle) { const tr = trackOf(d.toggle); if (tr) toggle(tr, sourceName(d.toggle)); return; }
   if (d.remove) { const s = S.selection.find(x => x.uri === d.remove); deselect(d.remove); if (s && S.screen.name === "review") toast(`Removed ${s.track.name}`, "Undo", () => { S.selection.push(s); persistSel(); render(); }); return; }
   if (d.keep) { S.keep.add(d.keep); return render(); }
+  if (d.listAlts !== undefined) { const i = +d.listAlts; S.list.open = S.list.open === i ? null : i; return render(); }
+  if (d.listPick) { const [i, uri] = d.listPick.split(/:(.+)/); const r = S.list.results[+i]; const c = r.candidates.find(x => x.uri === uri); if (c) { r.pick = c; r.on = !inTarget(c.uri); } S.list.open = null; return render(); }
+  if (d.listToggle !== undefined) { if (e.target.closest("[data-list-alts]")) return; const r = S.list.results[+d.listToggle]; if (r?.pick && !inTarget(r.pick.uri)) r.on = !r.on; return render(); }
   if (d.visibility) { const p = target(); const pub = d.visibility === "public"; if (pub === p.public) return;
     try { await D.updatePlaylistDetails(p.id, { public: pub }); render(); toast(pub ? "Playlist is public" : "Playlist is private"); } catch (err) { toast(`Couldn’t change visibility: ${err.message}`); } return; }
   if (d.dismiss) { S.ai.dismissed.add(d.dismiss); return render(); }
@@ -315,6 +346,21 @@ $app.addEventListener("click", async (e) => {
     case "recents": return go({ name: "recents" });
     case "switch": S.sheet = "switch"; return render();
     case "locked-cover": return login();
+    case "add-list": S.list = { ...S.list, results: null, open: null }; return go({ name: "list" });
+    case "list-edit": S.list.results = null; S.list.open = null; return render();
+    case "resolve-list": {
+      const entries = D.parseSongList(S.list.text || ""); if (!entries.length) return;
+      S.list.entries = entries; S.list.results = new Array(entries.length).fill(null); S.list.open = null; S.list.busy = true; render();
+      try { await D.resolveSongList(entries, (i, r) => { r.on = !!r.pick && !inTarget(r.pick.uri); S.list.results[i] = r; if (S.screen.name === "list") render(); }); }
+      catch (err) { toast(err.message); } finally { S.list.busy = false; if (S.screen.name === "list") render(); }
+      return;
+    }
+    case "list-add": {
+      const picks = S.list.results.filter(r => r?.pick && r.on && !inTarget(r.pick.uri) && !isSelected(r.pick.uri));
+      for (const r of picks) S.selection.push({ uri: r.pick.uri, source: "your list", track: r.pick });
+      persistSel(); S.list = { text: "", entries: [], results: null, open: null, busy: false };
+      S.stack = []; S.screen = { name: "review" }; render(); toast(`Added ${picks.length} · review and publish`); return;
+    }
     case "relogin": return login();
     case "save-edit": {
       const p = target(); const name = (document.getElementById("edit-name")?.value || "").trim() || p.name; const description = (document.getElementById("edit-desc")?.value || "").trim();
@@ -375,6 +421,7 @@ $app.addEventListener("input", (e) => {
     S.screen = { name: "search", q }; render(); catalogSearch(q);
   }
   if (e.target.id === "pf") { S.screen.filter = e.target.value; render(); }
+  if (e.target.id === "songlist") { S.list.text = e.target.value; const b = $app.querySelector("[data-action=resolve-list]"); if (b) b.disabled = !e.target.value.trim(); }
   if (e.target.id === "pname") { S.screen.value = e.target.value; const b = $app.querySelector("[data-action=create]"); if (b) b.disabled = !e.target.value.trim(); }
 });
 $app.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.id === "pname") $app.querySelector("[data-action=create]")?.click(); });
