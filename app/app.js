@@ -197,9 +197,11 @@ function reviewHTML() {
       <input id="cover-file" type="file" accept="image/*" hidden ${canCover ? "" : "disabled"}>
       <input id="edit-name" class="title-edit" value="${esc(p.name)}" placeholder="Playlist name" autocomplete="off" maxlength="100" aria-label="Playlist name">
       <input id="edit-desc" class="desc-edit" value="${esc(p.description || "")}" placeholder="Add description" autocomplete="off" maxlength="300" aria-label="Description">
-      <div class="sub">${p.total + newCount()} song${p.total + newCount() === 1 ? "" : "s"} · ${fmtDur(total)}</div>
-      <div class="vis"><button class="${p.public ? "" : "on"}" data-visibility="private">Private</button><button class="${p.public ? "on" : ""}" data-visibility="public">Public</button></div>
-      <button class="chip pill-outline" data-action="switch">Switch playlist</button>
+    </div>
+    <div class="pmeta">
+      <button class="meta-link" data-action="switch">Switch playlist</button><span class="dot">·</span>
+      <button class="meta-link" data-visibility="${p.public ? "private" : "public"}" title="Tap to make ${p.public ? "private" : "public"}">${p.public ? "Public" : "Private"}</button><span class="dot">·</span>
+      <span>${p.total + newCount()} song${p.total + newCount() === 1 ? "" : "s"} · ${fmtDur(total)}</span>
     </div>
     ${dupes.map(s => `<div class="banner amber"><span>⚠︎ ${esc(s.track.name)} is already in this playlist</span><span class="spacer"></span><button data-keep="${esc(s.uri)}">Keep both</button><button data-remove="${esc(s.uri)}">Skip</button></div>`).join("")}
     ${S.selection.length ? `<div id="newlist">${S.selection.map(s => rowHTML(s.track, { mode: "review", sub: `${artists(s.track)} · from ${s.source}`, trail: inTarget(s.uri) ? { text: S.keep.has(s.uri) ? "dupe, keeping" : "dupe", cls: "amber" } : null })).join("")}</div>` : `<div class="empty">Let’s find something for your playlist</div>`}
