@@ -138,6 +138,34 @@ export async function recentlyPlayed() {
   return out;
 }
 export async function searchCatalog(q) {
-  const r = await api(`/search?q=${encodeURIComponent(q)}&type=track&limit=10`);
+  const r = await api(`/search?q=${encodeURIComponent(q)}&type=track&limit=20`);
   return (r?.tracks?.items || []).map(slimTrack);
+}
+
+// ---------- recommendations from your own library ----------
+// Songs in your other playlists, by artists already in the target (or your top artists if it's empty).
+export function libraryRecs(targetId, n = 12) {
+  const t = playlist(targetId); if (!t) return [];
+  const inT = new Set(t.tracks);
+  const artistCount = new Map();
+  for (const uri of t.tracks) for (const a of track(uri)?.artists || []) artistCount.set(a.id, { name: a.name, n: (artistCount.get(a.id)?.n || 0) + 1 });
+  const seedArtists = artistCount.size ? artistCount : new Map(topArtists(8).map(a => [a.id, { name: a.name, n: 1 }]));
+  const scored = [];
+  for (const tr of lib.tracks.values()) {
+    if (inT.has(tr.uri)) continue;
+    const hit = tr.artists.find(a => seedArtists.has(a.id)); if (!hit) continue;
+    const seed = seedArtists.get(hit.id); const lists = playlistsFor(tr.uri).filter(p => p.id !== targetId);
+    if (!lists.length) continue;
+    const score = seed.n * 2 + lists.length;
+    const reason = artistCount.size ? `${seed.n} ${seed.name} song${seed.n > 1 ? "s" : ""} already here · in ${lists.slice(0, 2).map(p => p.name).join(", ")}` : `You save ${seed.name} a lot · in ${lists.slice(0, 2).map(p => p.name).join(", ")}`;
+    scored.push({ ...tr, score, reason });
+  }
+  return scored.sort((a, b) => b.score - a.score || a.name.localeCompare(b.name)).slice(0, n);
+}
+
+export async function createPlaylist(name) {
+  const p = await api("/me/playlists", { method: "POST", body: { name, public: false, description: "Built with Quick Add" } });
+  const entry = { id: p.id, name: p.name, image: "", ownerId: lib.me?.id, mine: true, total: 0, lastAdded: Date.now(), tracks: [] };
+  lib.playlists.unshift(entry); save();
+  return entry;
 }
