@@ -14,6 +14,14 @@ input { font: inherit; }
 .green { color: var(--green); }
 .amber { color: var(--amber); }
 
+/* playlist-mode banner (the active destination, always visible) */
+.mode-banner { display: flex; align-items: center; gap: 8px; padding: calc(10px + var(--safe-t)) 16px 10px; background: var(--green); color: var(--green-ink); font-size: 13px; font-weight: 700; }
+.mode-banner .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green-ink); opacity: 0.7; }
+.mode-banner .spacer { flex: 1; }
+.mode-banner .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 55%; }
+.mode-banner .count { font-weight: 500; opacity: 0.8; }
+.mode-banner + .head { padding-top: 10px; }
+
 /* header */
 .head { padding: calc(16px + var(--safe-t)) 16px 6px; display: flex; align-items: center; gap: 12px; }
 .head h1 { font-size: 22px; margin: 0; flex: 1; font-weight: 700; letter-spacing: -0.2px; }

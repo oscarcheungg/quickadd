@@ -68,6 +68,7 @@ const section = (label, action) => `<div class="section"><span>${esc(label)}</sp
 const playlistRowHTML = (p, attr = "data-open-playlist") => `<div class="row tappable" ${attr}="${esc(p.id)}">${p.image ? `<img class="art" src="${esc(p.image)}" alt="">` : `<div class="art"></div>`}
     <div class="meta"><div class="title ${p.id === S.target ? "in-target" : ""}">${esc(p.name)}</div><div class="sub">${p.total} song${p.total === 1 ? "" : "s"}${p.lastAdded ? ` · edited ${ago(new Date(p.lastAdded).toISOString())}` : ""}</div></div><span class="chev">›</span></div>`;
 const artistCardHTML = (a) => `<button class="artist" data-open-artist="${esc(a.id)}"><div class="avatar">${esc(initials(a.name))}</div><div class="name">${esc(a.name)}</div><div class="count">${a.uris.size} saved</div></button>`;
+const bannerHTML = () => { const p = target(); return p ? `<div class="mode-banner"><span class="dot"></span><span class="label">Playlist Mode</span><span class="spacer"></span><span class="name">${esc(p.name)}</span><span class="count">· ${p.total + newCount()} song${p.total + newCount() === 1 ? "" : "s"}</span></div>` : ""; };
 const headHTML = (title, withBack, right = "") => withBack
   ? `<div class="head stacked"><button class="back" data-back aria-label="Back">‹</button><h1>${esc(title)}</h1></div>`
   : `<div class="head"><h1>${esc(title)}</h1>${right}</div>`;
@@ -100,11 +101,7 @@ function existingHTML() { return `<div class="body" style="padding-top:6px">${li
 
 // ---------- home: suggestions ----------
 function homeHTML() {
-  const p = target();
-  return `<div class="thead">${p.image ? `<img class="art" src="${esc(p.image)}" alt="">` : `<div class="art"></div>`}
-      <div class="meta"><div class="title">${esc(p.name)}</div><div class="sub">${p.total} songs${S.selection.length ? ` · ${S.selection.length} waiting to publish` : ""}</div></div>
-      <button class="switch" data-action="switch">Switch ⌄</button></div>
-    ${searchFieldHTML("")}
+  return `${searchFieldHTML("")}
     <div class="tiles">
       <button class="tile" data-action="playlists"><span class="tile-icon">☰</span><span class="tile-name">Your playlists</span><span class="tile-sub">${lib.playlists.length}</span></button>
       <button class="tile" data-action="recents"><span class="tile-icon">↺</span><span class="tile-name">Recently played</span><span class="tile-sub">${S.recents.length || "…"}</span></button>
@@ -225,7 +222,7 @@ function render() {
   const withBack = !["home", "review"].includes(sc.name);
   const right = withBack ? "" : `<button class="kbd" data-action="reload" title="Reload library">↻</button>`;
   const active = document.activeElement?.id, selStart = document.activeElement?.selectionStart;
-  $app.innerHTML = `${headHTML(titles[sc.name], withBack, right)}${segHTML()}<div class="body">${bodies[sc.name]()}</div>${ctaHTML()}${sheetHTML()}`;
+  $app.innerHTML = `${bannerHTML()}${headHTML(titles[sc.name], withBack, right)}${segHTML()}<div class="body">${bodies[sc.name]()}</div>${ctaHTML()}${sheetHTML()}`;
   if (active) { const el = document.getElementById(active); if (el) { el.focus(); try { el.setSelectionRange(selStart, selStart); } catch {} } }
 }
 
