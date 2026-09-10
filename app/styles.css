@@ -14,12 +14,10 @@ input { font: inherit; }
 .green { color: var(--green); }
 .amber { color: var(--amber); }
 
-/* playlist-mode banner (the active destination, always visible) */
-.mode-banner { display: flex; align-items: center; gap: 8px; padding: calc(10px + var(--safe-t)) 16px 10px; background: var(--green); color: var(--green-ink); font-size: 13px; font-weight: 700; }
-.mode-banner .label { font-weight: 500; opacity: 0.8; }
-.mode-banner .spacer { flex: 1; }
-.mode-banner .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%; font-size: 14px; }
-.mode-banner .count { font-weight: 500; opacity: 0.8; }
+/* playlist-mode banner (the active destination, always visible; runs under the status bar when installed) */
+.mode-banner { display: flex; align-items: center; justify-content: center; gap: 5px; padding: calc(var(--safe-t) + 14px) 16px 13px; background: var(--green); color: var(--green-ink); font-size: 15px; font-weight: 700; }
+.mode-banner .label { font-weight: 700; }
+.mode-banner .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%; }
 .mode-banner + .head { padding-top: 10px; }
 
 /* header */

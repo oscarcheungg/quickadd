@@ -5,7 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 const ROOT = path.dirname(new URL(import.meta.url).pathname);
 const PORT = 8888;
-const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png" };
+const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".json": "application/json", ".webmanifest": "application/manifest+json", ".svg": "image/svg+xml", ".png": "image/png" };
 http.createServer((req, res) => {
   let p = new URL(req.url, "http://x").pathname;
   if (p === "/" || p === "/callback") p = "/index.html";
