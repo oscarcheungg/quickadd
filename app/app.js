@@ -192,15 +192,14 @@ function reviewHTML() {
   const dupes = S.selection.filter(s => inTarget(s.uri) && !S.keep.has(s.uri));
   const total = existing.reduce((a, t) => a + t.duration, 0) + S.selection.reduce((a, s) => a + (s.track.duration || 0), 0);
   const canCover = hasScope("ugc-image-upload"); const cover = p.cover || p.image;
-  return `<div class="thead inline-edit">
-      <label class="art cover ${canCover ? "" : "locked"}" for="cover-file" title="${canCover ? "Change cover" : "Log in again to change the cover"}">${cover ? `<img src="${esc(cover)}" alt="">` : `<span>+</span>`}</label>
+  return `<div class="phead">
+      <label class="cover ${canCover ? "" : "locked"}" for="cover-file" title="${canCover ? "Change cover" : "Log in again to change the cover"}">${cover ? `<img src="${esc(cover)}" alt="">` : `<span>+</span>`}</label>
       <input id="cover-file" type="file" accept="image/*" hidden ${canCover ? "" : "disabled"}>
-      <div class="meta">
-        <input id="edit-name" class="title-edit" value="${esc(p.name)}" placeholder="Playlist name" autocomplete="off" maxlength="100" aria-label="Playlist name">
-        <input id="edit-desc" class="desc-edit" value="${esc(p.description || "")}" placeholder="Add description" autocomplete="off" maxlength="300" aria-label="Description">
-        <div class="sub">${p.total + newCount()} song${p.total + newCount() === 1 ? "" : "s"} · ${fmtDur(total)}</div>
-      </div>
-      <button class="switch" data-action="switch">Switch</button></div>
+      <input id="edit-name" class="title-edit" value="${esc(p.name)}" placeholder="Playlist name" autocomplete="off" maxlength="100" aria-label="Playlist name">
+      <input id="edit-desc" class="desc-edit" value="${esc(p.description || "")}" placeholder="Add description" autocomplete="off" maxlength="300" aria-label="Description">
+      <div class="sub">${p.total + newCount()} song${p.total + newCount() === 1 ? "" : "s"} · ${fmtDur(total)}</div>
+      <button class="chip pill-outline" data-action="switch">Switch playlist</button>
+    </div>
     ${dupes.map(s => `<div class="banner amber"><span>⚠︎ ${esc(s.track.name)} is already in this playlist</span><span class="spacer"></span><button data-keep="${esc(s.uri)}">Keep both</button><button data-remove="${esc(s.uri)}">Skip</button></div>`).join("")}
     ${S.selection.length ? `<div id="newlist">${S.selection.map(s => rowHTML(s.track, { mode: "review", sub: `${artists(s.track)} · from ${s.source}`, trail: inTarget(s.uri) ? { text: S.keep.has(s.uri) ? "dupe, keeping" : "dupe", cls: "amber" } : null })).join("")}</div>` : `<div class="empty">Let’s find something for your playlist</div>`}
     ${existing.length ? section(`In this playlist · ${existing.length}`) + existing.map(t => rowHTML(t, { mode: "plain", sub: artists(t) })).join("") : ""}`;
