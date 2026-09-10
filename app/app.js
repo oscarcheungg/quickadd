@@ -67,9 +67,11 @@ function rowHTML(t, { mode = "plus", sub, trail, extra = "", cls = "" } = {}) {
 }
 const section = (label, action) => `<div class="section"><span>${esc(label)}</span><span class="spacer"></span>${action ? `<button data-action="${esc(action.id)}">${esc(action.label)}</button>` : ""}</div>`;
 const playlistRowHTML = (p, attr = "data-open-playlist") => `<div class="row tappable" ${attr}="${esc(p.id)}">${p.image ? `<img class="art" src="${esc(p.image)}" alt="">` : `<div class="art"></div>`}
-    <div class="meta"><div class="title ${p.id === S.target ? "in-target" : ""}">${esc(p.name)}</div><div class="sub">${p.total} songs${p.lastAdded ? ` · edited ${ago(new Date(p.lastAdded).toISOString())}` : ""}</div></div><span class="chev">›</span></div>`;
+    <div class="meta"><div class="title ${p.id === S.target ? "in-target" : ""}">${esc(p.name)}</div><div class="sub">${p.total} song${p.total === 1 ? "" : "s"}${p.lastAdded ? ` · edited ${ago(new Date(p.lastAdded).toISOString())}` : ""}</div></div><span class="chev">›</span></div>`;
 const artistCardHTML = (a) => `<button class="artist" data-open-artist="${esc(a.id)}"><div class="avatar">${esc(initials(a.name))}</div><div class="name">${esc(a.name)}</div><div class="count">${a.uris.size} saved</div></button>`;
-const headHTML = (title, withBack, right = "") => `<div class="head">${withBack ? `<button class="back" data-back>‹ Back</button>` : ""}<h1>${esc(title)}</h1>${right}</div>`;
+const headHTML = (title, withBack, right = "") => withBack
+  ? `<div class="head stacked"><button class="back" data-back>‹ Back</button><h1>${esc(title)}</h1></div>`
+  : `<div class="head"><h1>${esc(title)}</h1>${right}</div>`;
 function segHTML() {
   const n = S.selection.length, t = target(), isReview = S.screen.name === "review";
   return `<div class="seg"><button class="${!isReview ? "on" : ""}" data-action="find">Find${n ? ` · ${n} selected` : ""}</button><button class="${isReview ? "on target" : ""}" data-action="review">${esc(t?.name || "Playlist")}${t ? ` · ${t.total}` : ""}</button></div>`;
@@ -96,7 +98,7 @@ function newHTML() {
     <p class="empty" style="text-align:left">It's created in Spotify right away, private, and empty. You fill it here.</p></div>
     <div class="cta"><button class="btn green" data-action="create" ${(S.screen.value || "").trim() ? "" : "disabled"}>Create and start adding</button></div>`;
 }
-function existingHTML() { return `<div class="body">${section("Last edited first")}${lib.playlists.filter(p => p.mine).map(p => playlistRowHTML(p, "data-set-target")).join("")}</div>`; }
+function existingHTML() { return `<div class="body" style="padding-top:6px">${lib.playlists.filter(p => p.mine).map(p => playlistRowHTML(p, "data-set-target")).join("")}</div>`; }
 
 // ---------- home: suggestions ----------
 function homeHTML() {
@@ -217,7 +219,7 @@ function render() {
   const sc = S.screen;
   if (sc.name === "start") { $app.innerHTML = startHTML(); return; }
   if (sc.name === "new") { $app.innerHTML = headHTML("New playlist", true) + newHTML(); document.getElementById("pname")?.focus(); return; }
-  if (sc.name === "existing") { $app.innerHTML = headHTML("Add to a playlist", true) + existingHTML(); return; }
+  if (sc.name === "existing") { $app.innerHTML = headHTML("Your playlists", true) + existingHTML(); return; }
   if (!target()) { S.screen = { name: "start" }; S.stack = []; return render(); }
   const titles = { home: "Playlist Mode", search: "Search", playlist: D.playlist(sc.id)?.name || "Playlist", artist: lib.artists.get(sc.id)?.name || "Artist", artists: "Your artists", playlists: "Your playlists", recents: "Recently played", review: "Playlist Mode" };
   const bodies = { home: homeHTML, search: searchHTML, playlist: playlistHTML, artist: artistHTML, artists: artistsHTML, playlists: playlistsHTML, recents: recentsHTML, review: reviewHTML };

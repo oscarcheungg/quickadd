@@ -18,6 +18,8 @@ input { font: inherit; }
 .head { padding: calc(16px + var(--safe-t)) 16px 6px; display: flex; align-items: center; gap: 12px; }
 .head h1 { font-size: 22px; margin: 0; flex: 1; font-weight: 700; letter-spacing: -0.2px; }
 .head .back { font-size: 15px; font-weight: 600; color: var(--muted); padding: 6px 0; }
+.head.stacked { flex-direction: column; align-items: flex-start; gap: 2px; padding-bottom: 8px; }
+.head.stacked h1 { font-size: 28px; }
 .seg { margin: 6px 16px 8px; background: var(--panel); border-radius: 12px; padding: 3px; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
 .seg button { padding: 9px 10px; border-radius: 9px; font-weight: 600; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .seg button.on { background: var(--row); color: var(--text); }
