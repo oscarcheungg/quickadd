@@ -50,11 +50,13 @@ input { font: inherit; }
 .field input { flex: 1; background: none; border: 0; color: var(--text); padding: 12px 0; outline: none; font-size: 15px; }
 .field input::placeholder { color: var(--muted); }
 .field .clear { color: var(--muted); padding: 8px; }
-.field.search { background: #fff; margin: 0 var(--gutter); padding: 0 14px; gap: 10px; }
-.field.search .icon { width: 24px; height: 24px; color: #121212; flex: none; }
-.field.search input { color: #121212; padding: 13px 0; font-size: 16px; font-weight: 500; }
-.field.search input::placeholder { color: #121212; font-weight: 500; }
-.field.search .clear { color: #555; }
+.field.search { margin: 0 var(--gutter); padding: 0 14px; gap: 10px; }
+.field.search .icon { width: 22px; height: 22px; color: var(--muted); flex: none; }
+.field.search input { padding: 12px 0; font-size: 16px; }
+.field.search.hero { background: #fff; }
+.field.search.hero .icon { width: 24px; height: 24px; color: #121212; }
+.field.search.hero input { color: #121212; padding: 13px 0; font-weight: 500; }
+.field.search.hero input::placeholder { color: #121212; font-weight: 500; }
 .empty { padding: var(--s6) var(--gutter); color: var(--muted); text-align: center; }
 
 /* rows */
