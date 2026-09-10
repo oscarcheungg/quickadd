@@ -191,7 +191,7 @@ function reviewHTML() {
   const total = existing.reduce((a, t) => a + t.duration, 0) + S.selection.reduce((a, s) => a + (s.track.duration || 0), 0);
   return `<div class="thead">${p.image ? `<img class="art" src="${esc(p.image)}" alt="">` : `<div class="art"></div>`}
       <div class="meta"><div class="title">${esc(p.name)}</div><div class="sub">${p.total + newCount()} songs · ${fmtDur(total)}${S.selection.length ? ` · ${newCount()} unpublished` : ""}</div></div>
-      <button class="switch" data-action="switch">Switch ⌄</button></div>
+      <button class="switch" data-action="switch">Switch</button></div>
     ${dupes.map(s => `<div class="banner amber"><span>⚠︎ ${esc(s.track.name)} is already in this playlist</span><span class="spacer"></span><button data-keep="${esc(s.uri)}">Keep both</button><button data-remove="${esc(s.uri)}">Skip</button></div>`).join("")}
     ${S.selection.length ? section(`New · ${S.selection.length} · drag to reorder, ✕ to remove`) + `<div id="newlist">${S.selection.map(s => rowHTML(s.track, { mode: "review", sub: `${artists(s.track)} · from ${s.source}`, trail: inTarget(s.uri) ? { text: S.keep.has(s.uri) ? "dupe, keeping" : "dupe", cls: "amber" } : { text: "new", cls: "green" } })).join("")}</div>` : `<div class="empty">Nothing selected yet. Go to Find and tap + on any song.</div>`}
     ${section(`Already in ${p.name} · ${existing.length}`)}
