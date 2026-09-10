@@ -75,7 +75,7 @@ const headHTML = (title, withBack, right = "") => withBack
   : `<div class="head"><h1>${esc(title)}</h1>${right}</div>`;
 function segHTML() {
   const n = S.selection.length, t = target(), isReview = S.screen.name === "review";
-  return `<div class="seg"><button class="${!isReview ? "on" : ""}" data-action="find">Find${n ? ` · ${n} selected` : ""}</button><button class="${isReview ? "on target" : ""}" data-action="review">${esc(t?.name || "Playlist")}${t ? ` · ${t.total}` : ""}</button></div>`;
+  return `<div class="seg"><button class="${!isReview ? "on" : ""}" data-action="find">Search${n ? ` · ${n} selected` : ""}</button><button class="${isReview ? "on target" : ""}" data-action="review">${esc(t?.name || "Playlist")}${t ? ` · ${t.total}` : ""}</button></div>`;
 }
 function ctaHTML() {
   const n = S.selection.length, t = target();
@@ -224,7 +224,7 @@ function render() {
   const withBack = !["home", "review"].includes(sc.name);
   const right = withBack ? "" : `<button class="kbd" data-action="reload" title="Reload library">↻</button>`;
   const active = document.activeElement?.id, selStart = document.activeElement?.selectionStart;
-  $app.innerHTML = `${headHTML(titles[sc.name], withBack, right)}${segHTML()}<div class="body">${bodies[sc.name]()}</div>${ctaHTML()}${sheetHTML()}`;
+  $app.innerHTML = `${headHTML(titles[sc.name], withBack, right)}${withBack ? "" : segHTML()}<div class="body">${bodies[sc.name]()}</div>${ctaHTML()}${sheetHTML()}`;
   if (active) { const el = document.getElementById(active); if (el) { el.focus(); try { el.setSelectionRange(selStart, selStart); } catch {} } }
   lazyArtistImages();
 }
