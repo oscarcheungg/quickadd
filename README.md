@@ -18,7 +18,7 @@ Most playlists get built from other playlists, from what you've been listening t
 
 Live: https://oscarcheungg.github.io/quickadd/ (login is limited to allowlisted Spotify accounts while the app is in development mode; ask to be added).
 
-Locally, requires Node 18+ and a Spotify developer app with `http://127.0.0.1:8888/` as a redirect URI. The client ID is set in `app/spotify.js`.
+Locally, requires Node 18+ and a Spotify developer app with `http://127.0.0.1:8888/callback` as a redirect URI. The client ID is set in `app/spotify.js`.
 
 ```bash
 node app/server.mjs

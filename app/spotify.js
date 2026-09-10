@@ -3,7 +3,8 @@ export const CLIENT_ID = "e791b3aef59b4eeab94c1984073ce632";
 // Redirect back to wherever the app is served from (works locally and on GitHub Pages).
 // Register BOTH of these in the Spotify dashboard: http://127.0.0.1:8888/  and  https://<user>.github.io/<repo>/
 export const BASE_PATH = location.pathname.replace(/[^/]*$/, "");
-const REDIRECT_URI = location.origin + BASE_PATH;
+const LOCAL = /^(127\.0\.0\.1|localhost)$/.test(location.hostname);
+const REDIRECT_URI = location.origin + (LOCAL ? "/callback" : BASE_PATH);
 const SCOPES = ["user-read-currently-playing","user-read-recently-played","user-top-read","playlist-read-private","playlist-read-collaborative","playlist-modify-public","playlist-modify-private","ugc-image-upload"].join(" ");
 const TOKEN_KEY = "qa.token";
 
