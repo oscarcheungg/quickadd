@@ -195,7 +195,7 @@ function reviewHTML() {
       <div class="meta"><div class="title">${esc(p.name)}</div><div class="sub">${p.total + newCount()} songs · ${fmtDur(total)}${S.selection.length ? ` · ${newCount()} unpublished` : ""}</div></div>
       <button class="switch" data-action="switch">Switch</button></div>
     ${dupes.map(s => `<div class="banner amber"><span>⚠︎ ${esc(s.track.name)} is already in this playlist</span><span class="spacer"></span><button data-keep="${esc(s.uri)}">Keep both</button><button data-remove="${esc(s.uri)}">Skip</button></div>`).join("")}
-    ${S.selection.length ? section(`New · ${S.selection.length} · drag to reorder, ✕ to remove`) + `<div id="newlist">${S.selection.map(s => rowHTML(s.track, { mode: "review", sub: `${artists(s.track)} · from ${s.source}`, trail: inTarget(s.uri) ? { text: S.keep.has(s.uri) ? "dupe, keeping" : "dupe", cls: "amber" } : { text: "new", cls: "green" } })).join("")}</div>` : `<div class="empty">Let’s find something for your playlist</div>`}
+    ${S.selection.length ? `<div id="newlist">${S.selection.map(s => rowHTML(s.track, { mode: "review", sub: `${artists(s.track)} · from ${s.source}`, trail: inTarget(s.uri) ? { text: S.keep.has(s.uri) ? "dupe, keeping" : "dupe", cls: "amber" } : null })).join("")}</div>` : `<div class="empty">Let’s find something for your playlist</div>`}
     ${section(`Already in ${p.name} · ${existing.length}`)}
     ${existing.length ? existing.map(t => rowHTML(t, { mode: "plain", sub: artists(t) })).join("") : `<div class="empty">No songs yet</div>`}`;
 }
