@@ -97,7 +97,7 @@ function newHTML() {
   return `<div class="body centered"><h1>New playlist</h1><div class="field"><input id="pname" placeholder="Playlist name" autocomplete="off" enterkeyhint="done" value="${esc(S.screen.value || "")}"></div></div>
     <div class="cta"><button class="btn green" data-action="create" ${(S.screen.value || "").trim() ? "" : "disabled"}>Create and start adding</button></div>`;
 }
-function existingHTML() { return `<div class="body" style="padding-top:6px">${lib.playlists.filter(p => p.mine).map(p => playlistRowHTML(p, "data-set-target")).join("")}</div>`; }
+function existingHTML() { return `<div class="body">${lib.playlists.filter(p => p.mine).map(p => playlistRowHTML(p, "data-set-target")).join("")}</div>`; }
 
 // ---------- home: suggestions ----------
 function homeHTML() {
@@ -206,7 +206,7 @@ function sheetHTML() {
   if (S.sheet === "settings") return `<div class="scrim" data-action="closesheet"><div class="sheet" onclick="event.stopPropagation()"><div class="grab"></div><h2>Claude API key</h2>
     <p class="empty" style="text-align:left;padding-top:0">Used only from this browser to ask Claude what to add. Stored locally, never sent anywhere but Anthropic.</p>
     <div class="field"><input id="akey" type="password" placeholder="sk-ant-…" value="${esc(AI.getKey())}" autocomplete="off"></div>
-    <div style="display:flex;gap:10px;padding:12px 16px 0"><button class="btn green" data-action="savekey">Save</button>${AI.getKey() ? `<button class="btn ghost" data-action="clearkey">Remove</button>` : ""}</div></div></div>`;
+    <div style="display:flex;gap:10px;padding:var(--s3) var(--gutter) 0"><button class="btn green" data-action="savekey">Save</button>${AI.getKey() ? `<button class="btn ghost" data-action="clearkey">Remove</button>` : ""}</div></div></div>`;
   return "";
 }
 
