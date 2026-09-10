@@ -196,8 +196,7 @@ function reviewHTML() {
       <button class="switch" data-action="switch">Switch</button></div>
     ${dupes.map(s => `<div class="banner amber"><span>⚠︎ ${esc(s.track.name)} is already in this playlist</span><span class="spacer"></span><button data-keep="${esc(s.uri)}">Keep both</button><button data-remove="${esc(s.uri)}">Skip</button></div>`).join("")}
     ${S.selection.length ? `<div id="newlist">${S.selection.map(s => rowHTML(s.track, { mode: "review", sub: `${artists(s.track)} · from ${s.source}`, trail: inTarget(s.uri) ? { text: S.keep.has(s.uri) ? "dupe, keeping" : "dupe", cls: "amber" } : null })).join("")}</div>` : `<div class="empty">Let’s find something for your playlist</div>`}
-    ${section(`Already in ${p.name} · ${existing.length}`)}
-    ${existing.length ? existing.map(t => rowHTML(t, { mode: "plain", sub: artists(t) })).join("") : `<div class="empty">No songs yet</div>`}`;
+    ${existing.length ? section(`In this playlist · ${existing.length}`) + existing.map(t => rowHTML(t, { mode: "plain", sub: artists(t) })).join("") : ""}`;
 }
 
 // ---------- sheets ----------
