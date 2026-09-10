@@ -222,7 +222,7 @@ function render() {
   const withBack = !["home", "review"].includes(sc.name);
   const right = withBack ? "" : `<button class="kbd" data-action="reload" title="Reload library">↻</button>`;
   const active = document.activeElement?.id, selStart = document.activeElement?.selectionStart;
-  $app.innerHTML = `${bannerHTML()}${headHTML(titles[sc.name], withBack, right)}${segHTML()}<div class="body">${bodies[sc.name]()}</div>${ctaHTML()}${sheetHTML()}`;
+  $app.innerHTML = `${headHTML(titles[sc.name], withBack, right)}${segHTML()}<div class="body">${bodies[sc.name]()}</div>${ctaHTML()}${sheetHTML()}`;
   if (active) { const el = document.getElementById(active); if (el) { el.focus(); try { el.setSelectionRange(selStart, selStart); } catch {} } }
 }
 
