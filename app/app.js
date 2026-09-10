@@ -83,10 +83,13 @@ const searchFieldHTML = (q) => `<div class="field"><span class="muted">⌕</span
 
 // ---------- entry: choose what to build ----------
 function startHTML() {
-  return `<div class="splash"><h1>Quick Add</h1><p>What are you building today?</p>
-    <button class="btn green" data-action="start-new">＋ New playlist</button>
-    <button class="btn" data-action="start-existing">Add to an existing playlist</button>
-    <p class="kbd">${lib.playlists.length} playlists · ${lib.tracks.size} songs in your library</p></div>`;
+  const name = (lib.me?.display_name || "").split(" ")[0];
+  return `<div class="splash start"><p class="eyebrow">Quick Add</p><h1>Hello, ${esc(name || "there")}!</h1><p>What are you creating today?</p>
+    <div class="start-actions">
+      <button class="btn green" data-action="start-new">＋ New playlist</button>
+      <button class="btn" data-action="start-existing">Add to an existing playlist</button>
+    </div>
+    <p class="kbd">${lib.playlists.length} playlists · ${lib.tracks.size.toLocaleString()} songs in your library</p></div>`;
 }
 function newHTML() {
   return `<div class="body"><div class="field" style="margin-top:12px"><input id="pname" placeholder="Playlist name" autocomplete="off" enterkeyhint="done" value="${esc(S.screen.value || "")}"></div>

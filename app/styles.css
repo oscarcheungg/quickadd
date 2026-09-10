@@ -104,6 +104,7 @@ input { font: inherit; }
 /* toast */
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(92px + var(--safe-b)); background: #fff; color: #000; padding: 11px 16px; border-radius: 12px; font-size: 13.5px; display: flex; align-items: center; gap: 16px; z-index: 10; box-shadow: 0 8px 30px rgba(0,0,0,0.5); max-width: 380px; }
 .toast button { color: var(--green); font-weight: 700; }
+.toast[hidden] { display: none; }
 .toast .ink { color: #0a7d36; }
 
 /* login / loading */
@@ -120,5 +121,8 @@ input { font: inherit; }
 .tile-icon { font-size: 18px; color: var(--green); }
 .tile-name { font-size: 13px; font-weight: 600; margin-top: 4px; }
 .tile-sub { font-size: 12px; color: var(--muted); }
-.splash .btn { width: 100%; }
+.splash .btn { width: 100%; flex: none; }
+.splash .eyebrow { color: var(--green); font-size: 13px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; }
+.start-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.start .kbd { margin-top: 12px; }
 .head .kbd { padding: 6px 4px; font-size: 16px; }
