@@ -94,8 +94,7 @@ function startHTML() {
   </div>`;
 }
 function newHTML() {
-  return `<div class="body"><div class="field" style="margin-top:12px"><input id="pname" placeholder="Playlist name" autocomplete="off" enterkeyhint="done" value="${esc(S.screen.value || "")}"></div>
-    <p class="empty" style="text-align:left">It's created in Spotify right away, private, and empty. You fill it here.</p></div>
+  return `<div class="body centered"><h1>New playlist</h1><div class="field"><input id="pname" placeholder="Playlist name" autocomplete="off" enterkeyhint="done" value="${esc(S.screen.value || "")}"></div></div>
     <div class="cta"><button class="btn green" data-action="create" ${(S.screen.value || "").trim() ? "" : "disabled"}>Create and start adding</button></div>`;
 }
 function existingHTML() { return `<div class="body" style="padding-top:6px">${lib.playlists.filter(p => p.mine).map(p => playlistRowHTML(p, "data-set-target")).join("")}</div>`; }
@@ -218,7 +217,7 @@ function sheetHTML() {
 function render() {
   const sc = S.screen;
   if (sc.name === "start") { $app.innerHTML = startHTML(); return; }
-  if (sc.name === "new") { $app.innerHTML = headHTML("New playlist", true) + newHTML(); document.getElementById("pname")?.focus(); return; }
+  if (sc.name === "new") { $app.innerHTML = `<div class="head stacked"><button class="back" data-back>‹ Back</button></div>` + newHTML(); document.getElementById("pname")?.focus(); return; }
   if (sc.name === "existing") { $app.innerHTML = headHTML("Your playlists", true) + existingHTML(); return; }
   if (!target()) { S.screen = { name: "start" }; S.stack = []; return render(); }
   const titles = { home: "Playlist Mode", search: "Search", playlist: D.playlist(sc.id)?.name || "Playlist", artist: lib.artists.get(sc.id)?.name || "Artist", artists: "Your artists", playlists: "Your playlists", recents: "Recently played", review: "Playlist Mode" };
