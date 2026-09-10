@@ -151,7 +151,7 @@ function searchHTML() {
   const selectable = res.tracks.filter(t => !inTarget(t.uri) && !isSelected(t.uri));
   return `${searchFieldHTML(q)}
     ${res.artists.length ? section("Artists") + `<div class="hscroll">${res.artists.map(a => `<button class="artist" data-open-catalog-artist="${esc(a.id)}"><div class="avatar">${a.image ? `<img src="${esc(a.image)}" alt="">` : esc(initials(a.name))}</div><div class="name">${esc(a.name)}</div></button>`).join("")}</div>` : ""}
-    ${section(res.tracks.length ? `Songs · ${res.tracks.length}` : "Songs", selectable.length > 1 ? { id: "selectall", label: `Select all ${selectable.length}` } : null)}
+    ${section("Songs")}
     <div id="catalog">${res.tracks.length ? res.tracks.map(t => rowHTML(t, { sub: artists(t) })).join("") : ready ? `<div class="empty">Couldn’t find “${esc(q)}”</div>` : `<div class="empty">Searching…</div>`}</div>
     ${ready && res.tracks.length >= 10 && !res.done ? `<div class="more"><button class="chip" data-action="more-results">${res.loading ? "Loading…" : "More results"}</button></div>` : ""}`;
 }
