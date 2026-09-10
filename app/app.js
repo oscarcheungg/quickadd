@@ -89,7 +89,7 @@ function startHTML() {
       <button class="btn green" data-action="start-new">＋ New playlist</button>
       <button class="btn" data-action="start-existing">Add to an existing playlist</button>
     </div>
-    <p class="kbd">${lib.playlists.length} playlists · ${lib.tracks.size.toLocaleString()} songs in your library</p></div>`;
+  </div>`;
 }
 function newHTML() {
   return `<div class="body"><div class="field" style="margin-top:12px"><input id="pname" placeholder="Playlist name" autocomplete="off" enterkeyhint="done" value="${esc(S.screen.value || "")}"></div>
