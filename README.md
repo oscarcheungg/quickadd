@@ -18,10 +18,10 @@ Most playlists get built from other playlists, from what you've been listening t
 
 Live: https://oscarcheungg.github.io/playlistmode/ (login is limited to allowlisted Spotify accounts while the app is in development mode; ask to be added).
 
-Locally, requires Node 18+ and a Spotify developer app with `http://127.0.0.1:8888/callback` as a redirect URI. The client ID is set in `app/spotify.js`.
+Locally, requires Node 18+ and a Spotify developer app with `http://127.0.0.1:8888/callback` as a redirect URI. The client ID is set in `spotify.js`.
 
 ```bash
-node app/server.mjs
+node server.mjs
 ```
 
 Then open http://127.0.0.1:8888 and log in with Spotify. The app reads your playlists once and caches them in the browser.

@@ -2,6 +2,7 @@
 _private/
 
 # secrets / tokens
+token.json
 **/token.json
 .env
 .env.*
