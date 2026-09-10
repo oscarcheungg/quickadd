@@ -1,4 +1,4 @@
-import { login, logout, handleCallback, getStoredToken, api } from "./spotify.js";
+import { login, logout, handleCallback, getStoredToken, hasScope, api } from "./spotify.js";
 import * as D from "./data.js";
 import * as AI from "./ai.js";
 const { lib } = D;
@@ -191,9 +191,9 @@ function reviewHTML() {
   const p = target(); const existing = p.tracks.map(D.track).filter(Boolean);
   const dupes = S.selection.filter(s => inTarget(s.uri) && !S.keep.has(s.uri));
   const total = existing.reduce((a, t) => a + t.duration, 0) + S.selection.reduce((a, s) => a + (s.track.duration || 0), 0);
-  return `<div class="thead">${p.image ? `<img class="art" src="${esc(p.image)}" alt="">` : `<div class="art"></div>`}
-      <div class="meta"><div class="title">${esc(p.name)}</div><div class="sub">${p.total + newCount()} songs · ${fmtDur(total)}${S.selection.length ? ` · ${newCount()} unpublished` : ""}</div></div>
-      <button class="switch" data-action="switch">Switch</button></div>
+  return `<div class="thead tappable" data-action="edit">${p.cover || p.image ? `<img class="art" src="${esc(p.cover || p.image)}" alt="">` : `<div class="art"></div>`}
+      <div class="meta"><div class="title">${esc(p.name)}</div>${p.description ? `<div class="sub">${esc(p.description)}</div>` : ""}<div class="sub">${p.total + newCount()} songs · ${fmtDur(total)}${S.selection.length ? ` · ${newCount()} unpublished` : ""}</div></div>
+      <div class="thead-actions"><button class="switch" data-action="edit">Edit</button><button class="switch" data-action="switch">Switch</button></div></div>
     ${dupes.map(s => `<div class="banner amber"><span>⚠︎ ${esc(s.track.name)} is already in this playlist</span><span class="spacer"></span><button data-keep="${esc(s.uri)}">Keep both</button><button data-remove="${esc(s.uri)}">Skip</button></div>`).join("")}
     ${S.selection.length ? `<div id="newlist">${S.selection.map(s => rowHTML(s.track, { mode: "review", sub: `${artists(s.track)} · from ${s.source}`, trail: inTarget(s.uri) ? { text: S.keep.has(s.uri) ? "dupe, keeping" : "dupe", cls: "amber" } : null })).join("")}</div>` : `<div class="empty">Let’s find something for your playlist</div>`}
     ${existing.length ? section(`In this playlist · ${existing.length}`) + existing.map(t => rowHTML(t, { mode: "plain", sub: artists(t) })).join("") : ""}`;
@@ -204,6 +204,13 @@ function sheetHTML() {
   if (S.sheet === "switch") return `<div class="scrim" data-action="closesheet"><div class="sheet" onclick="event.stopPropagation()"><div class="grab"></div><h2>Build which playlist?</h2>
     <div class="row tappable" data-action="start-new"><div class="art" style="display:grid;place-items:center;font-size:22px">＋</div><div class="meta"><div class="title">New playlist</div><div class="sub">Create one in Spotify and start adding</div></div></div>
     ${lib.playlists.filter(p => p.mine).map(p => playlistRowHTML(p, "data-set-target")).join("")}</div></div>`;
+  if (S.sheet === "edit") { const p = target(); const e = S.edit || {}; const canCover = hasScope("ugc-image-upload");
+    return `<div class="scrim" data-action="closesheet"><div class="sheet" onclick="event.stopPropagation()"><div class="grab"></div><h2>Edit playlist</h2>
+    <div class="edit-cover"><label class="cover-pick" for="cover-file">${e.preview || p.cover || p.image ? `<img src="${esc(e.preview || p.cover || p.image)}" alt="">` : `<span>Choose image</span>`}</label><input id="cover-file" type="file" accept="image/*" hidden ${canCover ? "" : "disabled"}>
+      ${canCover ? `<span class="kbd">Tap the cover to change it</span>` : `<button class="kbd" data-action="relogin">Log in again to enable cover uploads</button>`}</div>
+    <div class="field"><input id="edit-name" placeholder="Name" value="${esc(e.name ?? p.name)}" autocomplete="off" maxlength="100"></div>
+    <div class="field"><input id="edit-desc" placeholder="Add a description" value="${esc(e.description ?? p.description ?? "")}" autocomplete="off" maxlength="300"></div>
+    <div style="display:flex;gap:10px;padding:var(--s3) var(--gutter) 0"><button class="btn ghost" data-action="closesheet">Cancel</button><button class="btn green" data-action="save-edit">Save</button></div></div></div>`; }
   if (S.sheet === "settings") return `<div class="scrim" data-action="closesheet"><div class="sheet" onclick="event.stopPropagation()"><div class="grab"></div><h2>Claude API key</h2>
     <p class="empty" style="text-align:left;padding-top:0">Used only from this browser to ask Claude what to add. Stored locally, never sent anywhere but Anthropic.</p>
     <div class="field"><input id="akey" type="password" placeholder="sk-ant-…" value="${esc(AI.getKey())}" autocomplete="off"></div>
@@ -276,8 +283,20 @@ $app.addEventListener("click", async (e) => {
     case "playlists": return go({ name: "playlists" });
     case "recents": return go({ name: "recents" });
     case "switch": S.sheet = "switch"; return render();
+    case "edit": S.sheet = "edit"; S.edit = {}; render(); document.getElementById("edit-name")?.focus(); return;
+    case "relogin": return login();
+    case "save-edit": {
+      const p = target(); const name = (document.getElementById("edit-name")?.value || "").trim() || p.name; const description = (document.getElementById("edit-desc")?.value || "").trim();
+      t.disabled = true; t.textContent = "Saving…";
+      try {
+        if (name !== p.name || description !== (p.description || "")) await D.updatePlaylistDetails(p.id, { name, description });
+        if (S.edit?.base64) await D.uploadPlaylistCover(p.id, S.edit.base64, S.edit.preview);
+        S.sheet = null; S.edit = null; render(); toast("Playlist updated");
+      } catch (err) { render(); toast(err.status === 401 || err.status === 403 ? "Spotify refused the cover upload. Log in again to grant permission." : `Couldn’t save: ${err.message}`); }
+      return;
+    }
     case "settings": S.sheet = "settings"; render(); document.getElementById("akey")?.focus(); return;
-    case "closesheet": S.sheet = null; return render();
+    case "closesheet": S.sheet = null; S.edit = null; return render();
     case "savekey": AI.setKey(document.getElementById("akey")?.value || ""); AI.resetClient(); S.sheet = null; S.ai.status = "idle"; render(); loadSuggestions(true); return;
     case "clearkey": AI.setKey(""); AI.resetClient(); S.sheet = null; S.ai = { status: "idle", items: [], error: "", forTarget: null, dismissed: new Set() }; return render();
     case "ai-refresh": return loadSuggestions(true);
@@ -302,6 +321,11 @@ $app.addEventListener("click", async (e) => {
     case "reload": return boot(true);
   }
 });
+$app.addEventListener("change", async (e) => {
+  if (e.target.id !== "cover-file" || !e.target.files?.[0]) return;
+  try { const { base64, dataUrl } = await D.imageToJpegBase64(e.target.files[0]); S.edit = { ...(S.edit || {}), name: document.getElementById("edit-name")?.value, description: document.getElementById("edit-desc")?.value, base64, preview: dataUrl }; render(); }
+  catch (err) { toast(err.message); }
+});
 $app.addEventListener("input", (e) => {
   if (e.target.id === "q") {
     const q = e.target.value;
@@ -310,6 +334,7 @@ $app.addEventListener("input", (e) => {
     S.screen = { name: "search", q }; render(); catalogSearch(q);
   }
   if (e.target.id === "pf") { S.screen.filter = e.target.value; render(); }
+  if (e.target.id === "edit-name" || e.target.id === "edit-desc") { S.edit = { ...(S.edit || {}), [e.target.id === "edit-name" ? "name" : "description"]: e.target.value }; }
   if (e.target.id === "pname") { S.screen.value = e.target.value; const b = $app.querySelector("[data-action=create]"); if (b) b.disabled = !e.target.value.trim(); }
 });
 $app.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.id === "pname") $app.querySelector("[data-action=create]")?.click(); });

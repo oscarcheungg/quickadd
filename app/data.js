@@ -58,7 +58,7 @@ export async function loadLibrary(onProgress) {
   lib.me = await api("/me");
   const raw = await apiAll("/me/playlists?limit=50");
   const mine = raw.filter(p => p.owner?.id === lib.me.id || p.collaborative);
-  const playlists = mine.map(p => ({ id: p.id, name: p.name, image: p.images?.at(-1)?.url || "", ownerId: p.owner?.id, mine: p.owner?.id === lib.me.id, total: 0, lastAdded: 0, tracks: [] }));
+  const playlists = mine.map(p => ({ id: p.id, name: p.name, description: p.description || "", image: p.images?.at(-1)?.url || "", cover: p.images?.[0]?.url || "", ownerId: p.owner?.id, mine: p.owner?.id === lib.me.id, total: 0, lastAdded: 0, tracks: [] }));
   lib.tracks = new Map();
   let done = 0;
   const queue = [...playlists];
@@ -183,7 +183,7 @@ export function libraryRecs(targetId, n = 12) {
 
 export async function createPlaylist(name) {
   const p = await api("/me/playlists", { method: "POST", body: { name, public: false, description: "Built with Playlist Mode" } });
-  const entry = { id: p.id, name: p.name, image: "", ownerId: lib.me?.id, mine: true, total: 0, lastAdded: Date.now(), tracks: [] };
+  const entry = { id: p.id, name: p.name, description: "", image: "", cover: "", ownerId: lib.me?.id, mine: true, total: 0, lastAdded: Date.now(), tracks: [] };
   lib.playlists.unshift(entry); save();
   return entry;
 }
@@ -200,4 +200,32 @@ export function artistImage(id) {
   const p = api(`/artists/${id}`).then(a => { const url = a?.images?.at(-1)?.url || ""; c[id] = url; try { localStorage.setItem(IMG_KEY, JSON.stringify(c)); } catch {} return url; })
     .catch(() => "").finally(() => imgPending.delete(id));
   imgPending.set(id, p); return p;
+}
+
+// ---------- playlist details ----------
+export async function updatePlaylistDetails(id, { name, description }) {
+  await api(`/playlists/${id}`, { method: "PUT", body: { name, description } });
+  const p = playlist(id); if (p) { p.name = name; p.description = description; save(); }
+}
+// Cover must be a JPEG ≤ 256 KB, sent as raw base64. Needs the ugc-image-upload scope.
+export async function uploadPlaylistCover(id, base64Jpeg, previewUrl) {
+  const { accessToken } = await import("./spotify.js");
+  const res = await fetch(`https://api.spotify.com/v1/playlists/${id}/images`, { method: "PUT", headers: { Authorization: `Bearer ${await accessToken()}`, "Content-Type": "image/jpeg" }, body: base64Jpeg });
+  if (!res.ok) { const b = await res.json().catch(() => null); const e = new Error(b?.error?.message || `Upload failed (${res.status})`); e.status = res.status; throw e; }
+  const p = playlist(id); if (p) { p.image = previewUrl; p.cover = previewUrl; save(); }
+}
+// Resize any picked image to a square JPEG under the limit.
+export function imageToJpegBase64(file, size = 640) {
+  return new Promise((resolve, reject) => {
+    const img = new Image(); const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const c = document.createElement("canvas"); c.width = size; c.height = size; const ctx = c.getContext("2d");
+      const s = Math.min(img.width, img.height); ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, size, size);
+      let q = 0.85, dataUrl = c.toDataURL("image/jpeg", q);
+      while (dataUrl.length * 0.75 > 250_000 && q > 0.3) { q -= 0.1; dataUrl = c.toDataURL("image/jpeg", q); }
+      URL.revokeObjectURL(url); resolve({ base64: dataUrl.split(",")[1], dataUrl });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Couldn’t read that image")); };
+    img.src = url;
+  });
 }

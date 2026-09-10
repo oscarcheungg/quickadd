@@ -1,7 +1,7 @@
 // Spotify auth (PKCE, no secret) + a small API helper.
 export const CLIENT_ID = "e791b3aef59b4eeab94c1984073ce632";
 const REDIRECT_URI = location.origin + "/callback";
-const SCOPES = ["user-read-currently-playing","user-read-recently-played","user-top-read","playlist-read-private","playlist-read-collaborative","playlist-modify-public","playlist-modify-private"].join(" ");
+const SCOPES = ["user-read-currently-playing","user-read-recently-played","user-top-read","playlist-read-private","playlist-read-collaborative","playlist-modify-public","playlist-modify-private","ugc-image-upload"].join(" ");
 const TOKEN_KEY = "qa.token";
 
 const b64url = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -46,6 +46,8 @@ async function refresh(tok) {
   next.refresh_token ||= tok.refresh_token;
   return storeToken(next);
 }
+
+export function hasScope(scope) { const t = getStoredToken(); return !!t?.scope?.split(" ").includes(scope); }
 
 export async function accessToken() {
   let tok = getStoredToken();
