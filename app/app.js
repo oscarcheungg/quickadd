@@ -199,18 +199,25 @@ function reviewHTML() {
     ${existing.length ? section(`In this playlist · ${existing.length}`) + existing.map(t => rowHTML(t, { mode: "plain", sub: artists(t) })).join("") : ""}`;
 }
 
+// ---------- edit playlist (full screen, Spotify-style) ----------
+function editHTML() {
+  const p = target(); const e = S.edit || {}; const canCover = hasScope("ugc-image-upload");
+  const cover = e.preview || p.cover || p.image; const desc = e.description ?? p.description ?? ""; const showDesc = e.descOpen || desc;
+  return `<div class="body has-cta edit">
+    <label class="cover-pick big" for="cover-file">${cover ? `<img src="${esc(cover)}" alt="">` : `<span>Choose image</span>`}</label>
+    <input id="cover-file" type="file" accept="image/*" hidden ${canCover ? "" : "disabled"}>
+    ${canCover ? `<label class="link" for="cover-file">Change playlist cover</label>` : `<button class="link" data-action="relogin">Log in again to change the cover</button>`}
+    <input id="edit-name" class="big-name" placeholder="Playlist name" value="${esc(e.name ?? p.name)}" autocomplete="off" maxlength="100">
+    ${showDesc ? `<input id="edit-desc" class="desc" placeholder="Add description" value="${esc(desc)}" autocomplete="off" maxlength="300">` : `<button class="chip pill-outline" data-action="add-desc">Add description</button>`}
+  </div>
+  <div class="cta"><button class="btn green" data-action="save-edit">Save</button></div>`;
+}
+
 // ---------- sheets ----------
 function sheetHTML() {
   if (S.sheet === "switch") return `<div class="scrim" data-action="closesheet"><div class="sheet" onclick="event.stopPropagation()"><div class="grab"></div><h2>Build which playlist?</h2>
     <div class="row tappable" data-action="start-new"><div class="art" style="display:grid;place-items:center;font-size:22px">＋</div><div class="meta"><div class="title">New playlist</div><div class="sub">Create one in Spotify and start adding</div></div></div>
     ${lib.playlists.filter(p => p.mine).map(p => playlistRowHTML(p, "data-set-target")).join("")}</div></div>`;
-  if (S.sheet === "edit") { const p = target(); const e = S.edit || {}; const canCover = hasScope("ugc-image-upload");
-    return `<div class="scrim" data-action="closesheet"><div class="sheet" onclick="event.stopPropagation()"><div class="grab"></div><h2>Edit playlist</h2>
-    <div class="edit-cover"><label class="cover-pick" for="cover-file">${e.preview || p.cover || p.image ? `<img src="${esc(e.preview || p.cover || p.image)}" alt="">` : `<span>Choose image</span>`}</label><input id="cover-file" type="file" accept="image/*" hidden ${canCover ? "" : "disabled"}>
-      ${canCover ? `<span class="kbd">Tap the cover to change it</span>` : `<button class="kbd" data-action="relogin">Log in again to enable cover uploads</button>`}</div>
-    <div class="field"><input id="edit-name" placeholder="Name" value="${esc(e.name ?? p.name)}" autocomplete="off" maxlength="100"></div>
-    <div class="field"><input id="edit-desc" placeholder="Add a description" value="${esc(e.description ?? p.description ?? "")}" autocomplete="off" maxlength="300"></div>
-    <div style="display:flex;gap:10px;padding:var(--s3) var(--gutter) 0"><button class="btn ghost" data-action="closesheet">Cancel</button><button class="btn green" data-action="save-edit">Save</button></div></div></div>`; }
   if (S.sheet === "settings") return `<div class="scrim" data-action="closesheet"><div class="sheet" onclick="event.stopPropagation()"><div class="grab"></div><h2>Claude API key</h2>
     <p class="empty" style="text-align:left;padding-top:0">Used only from this browser to ask Claude what to add. Stored locally, never sent anywhere but Anthropic.</p>
     <div class="field"><input id="akey" type="password" placeholder="sk-ant-…" value="${esc(AI.getKey())}" autocomplete="off"></div>
@@ -223,6 +230,7 @@ function render() {
   const sc = S.screen;
   if (sc.name === "start") { $app.innerHTML = startHTML(); return; }
   if (sc.name === "new") { $app.innerHTML = `<div class="head stacked"><button class="back" data-back aria-label="Back">‹</button></div>` + newHTML(); document.getElementById("pname")?.focus(); return; }
+  if (sc.name === "edit") { $app.innerHTML = `<div class="head stacked"><button class="back" data-back aria-label="Back">‹</button></div>` + editHTML(); return; }
   if (sc.name === "existing") { $app.innerHTML = headHTML("Your playlists", true) + existingHTML(); return; }
   if (!target()) { S.screen = { name: "start" }; S.stack = []; return render(); }
   const titles = { home: "Playlist Mode", search: "Search", playlist: D.playlist(sc.id)?.name || "Playlist", artist: lib.artists.get(sc.id)?.name || "Artist", "catalog-artist": sc.artist?.name || "Artist", artists: "Your artists", playlists: "Your playlists", recents: "Recently played", review: "Playlist Mode" };
@@ -283,7 +291,8 @@ $app.addEventListener("click", async (e) => {
     case "playlists": return go({ name: "playlists" });
     case "recents": return go({ name: "recents" });
     case "switch": S.sheet = "switch"; return render();
-    case "edit": S.sheet = "edit"; S.edit = {}; render(); document.getElementById("edit-name")?.focus(); return;
+    case "edit": S.edit = {}; return go({ name: "edit" });
+    case "add-desc": S.edit = { ...(S.edit || {}), descOpen: true }; render(); document.getElementById("edit-desc")?.focus(); return;
     case "relogin": return login();
     case "save-edit": {
       const p = target(); const name = (document.getElementById("edit-name")?.value || "").trim() || p.name; const description = (document.getElementById("edit-desc")?.value || "").trim();
@@ -291,12 +300,12 @@ $app.addEventListener("click", async (e) => {
       try {
         if (name !== p.name || description !== (p.description || "")) await D.updatePlaylistDetails(p.id, { name, description });
         if (S.edit?.base64) await D.uploadPlaylistCover(p.id, S.edit.base64, S.edit.preview);
-        S.sheet = null; S.edit = null; render(); toast("Playlist updated");
+        S.edit = null; back(); toast("Playlist updated");
       } catch (err) { render(); toast(err.status === 401 || err.status === 403 ? "Spotify refused the cover upload. Log in again to grant permission." : `Couldn’t save: ${err.message}`); }
       return;
     }
     case "settings": S.sheet = "settings"; render(); document.getElementById("akey")?.focus(); return;
-    case "closesheet": S.sheet = null; S.edit = null; return render();
+    case "closesheet": S.sheet = null; return render();
     case "savekey": AI.setKey(document.getElementById("akey")?.value || ""); AI.resetClient(); S.sheet = null; S.ai.status = "idle"; render(); loadSuggestions(true); return;
     case "clearkey": AI.setKey(""); AI.resetClient(); S.sheet = null; S.ai = { status: "idle", items: [], error: "", forTarget: null, dismissed: new Set() }; return render();
     case "ai-refresh": return loadSuggestions(true);
