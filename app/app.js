@@ -198,6 +198,7 @@ function reviewHTML() {
       <input id="edit-name" class="title-edit" value="${esc(p.name)}" placeholder="Playlist name" autocomplete="off" maxlength="100" aria-label="Playlist name">
       <input id="edit-desc" class="desc-edit" value="${esc(p.description || "")}" placeholder="Add description" autocomplete="off" maxlength="300" aria-label="Description">
       <div class="sub">${p.total + newCount()} song${p.total + newCount() === 1 ? "" : "s"} · ${fmtDur(total)}</div>
+      <div class="vis"><button class="${p.public ? "" : "on"}" data-visibility="private">Private</button><button class="${p.public ? "on" : ""}" data-visibility="public">Public</button></div>
       <button class="chip pill-outline" data-action="switch">Switch playlist</button>
     </div>
     ${dupes.map(s => `<div class="banner amber"><span>⚠︎ ${esc(s.track.name)} is already in this playlist</span><span class="spacer"></span><button data-keep="${esc(s.uri)}">Keep both</button><button data-remove="${esc(s.uri)}">Skip</button></div>`).join("")}
@@ -258,7 +259,7 @@ function lazyArtistImages() { for (const el of $app.querySelectorAll("[data-arti
 
 // ---------- events ----------
 $app.addEventListener("click", async (e) => {
-  const t = e.target.closest("[data-select],[data-deselect],[data-toggle],[data-remove],[data-keep],[data-dismiss],[data-open-playlist],[data-open-artist],[data-open-catalog-artist],[data-set-target],[data-chip],[data-back],[data-action]");
+  const t = e.target.closest("[data-select],[data-deselect],[data-toggle],[data-remove],[data-keep],[data-dismiss],[data-visibility],[data-open-playlist],[data-open-artist],[data-open-catalog-artist],[data-set-target],[data-chip],[data-back],[data-action]");
   if (!t) return;
   const d = t.dataset;
   const trackOf = (uri) => D.track(uri) || S.recents.find(x => x.uri === uri) || S.catalog.tracks.find(x => x.uri === uri) || (S.screen.tracks || []).find(x => x.uri === uri) || S.ai.items.find(x => x.uri === uri) || (S.nowPlaying?.track.uri === uri ? S.nowPlaying.track : null);
@@ -268,6 +269,8 @@ $app.addEventListener("click", async (e) => {
   if (d.toggle) { const tr = trackOf(d.toggle); if (tr) toggle(tr, sourceName(d.toggle)); return; }
   if (d.remove) { const s = S.selection.find(x => x.uri === d.remove); deselect(d.remove); if (s && S.screen.name === "review") toast(`Removed ${s.track.name}`, "Undo", () => { S.selection.push(s); persistSel(); render(); }); return; }
   if (d.keep) { S.keep.add(d.keep); return render(); }
+  if (d.visibility) { const p = target(); const pub = d.visibility === "public"; if (pub === p.public) return;
+    try { await D.updatePlaylistDetails(p.id, { public: pub }); render(); toast(pub ? "Playlist is public" : "Playlist is private"); } catch (err) { toast(`Couldn’t change visibility: ${err.message}`); } return; }
   if (d.dismiss) { S.ai.dismissed.add(d.dismiss); return render(); }
   if (d.openPlaylist) return go({ name: "playlist", id: d.openPlaylist });
   if (d.openArtist) return go({ name: "artist", id: d.openArtist });

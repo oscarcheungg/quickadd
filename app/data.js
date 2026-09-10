@@ -58,7 +58,7 @@ export async function loadLibrary(onProgress) {
   lib.me = await api("/me");
   const raw = await apiAll("/me/playlists?limit=50");
   const mine = raw.filter(p => p.owner?.id === lib.me.id || p.collaborative);
-  const playlists = mine.map(p => ({ id: p.id, name: p.name, description: p.description || "", image: p.images?.at(-1)?.url || "", cover: p.images?.[0]?.url || "", ownerId: p.owner?.id, mine: p.owner?.id === lib.me.id, total: 0, lastAdded: 0, tracks: [] }));
+  const playlists = mine.map(p => ({ id: p.id, name: p.name, description: p.description || "", public: p.public === true, image: p.images?.at(-1)?.url || "", cover: p.images?.[0]?.url || "", ownerId: p.owner?.id, mine: p.owner?.id === lib.me.id, total: 0, lastAdded: 0, tracks: [] }));
   lib.tracks = new Map();
   let done = 0;
   const queue = [...playlists];
@@ -183,7 +183,7 @@ export function libraryRecs(targetId, n = 12) {
 
 export async function createPlaylist(name) {
   const p = await api("/me/playlists", { method: "POST", body: { name, public: false, description: "Built with Playlist Mode" } });
-  const entry = { id: p.id, name: p.name, description: "", image: "", cover: "", ownerId: lib.me?.id, mine: true, total: 0, lastAdded: Date.now(), tracks: [] };
+  const entry = { id: p.id, name: p.name, description: "", public: false, image: "", cover: "", ownerId: lib.me?.id, mine: true, total: 0, lastAdded: Date.now(), tracks: [] };
   lib.playlists.unshift(entry); save();
   return entry;
 }
@@ -203,9 +203,9 @@ export function artistImage(id) {
 }
 
 // ---------- playlist details ----------
-export async function updatePlaylistDetails(id, { name, description }) {
-  await api(`/playlists/${id}`, { method: "PUT", body: { name, description } });
-  const p = playlist(id); if (p) { p.name = name; p.description = description; save(); }
+export async function updatePlaylistDetails(id, fields) {
+  await api(`/playlists/${id}`, { method: "PUT", body: fields });
+  const p = playlist(id); if (p) { Object.assign(p, fields); save(); }
 }
 // Cover must be a JPEG ≤ 256 KB, sent as raw base64. Needs the ugc-image-upload scope.
 export async function uploadPlaylistCover(id, base64Jpeg, previewUrl) {
