@@ -79,7 +79,7 @@ function segHTML() {
 }
 function ctaHTML() {
   const n = S.selection.length, t = target();
-  if (S.screen.name === "review") { const k = newCount(); return `<div class="cta">${n ? `<button class="btn ghost" data-action="discard">Discard ${n}</button>` : ""}<button class="btn green" data-action="publish" ${k ? "" : "disabled"}>${k ? `Publish ${k} to Spotify` : "Nothing to publish"}</button></div>`; }
+  if (S.screen.name === "review") { const k = newCount(); return `<div class="cta"><button class="btn green" data-action="publish" ${k ? "" : "disabled"}>Publish to Spotify</button></div>`; }
   return `<div class="cta"><button class="btn" data-action="review" ${n ? "" : "disabled"}>${n ? `Review ${n} in ${esc(t?.name)} →` : `Add songs`}</button></div>`;
 }
 const searchFieldHTML = (q) => `<div class="field search ${q ? "" : "hero"}"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><input id="q" type="search" placeholder="What's on your mind?" value="${esc(q)}" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">${q ? `<button class="clear" data-action="clearq">✕</button>` : ""}</div>`;
