@@ -41,7 +41,8 @@ input { font: inherit; }
 .seg button.on.target { color: var(--green); }
 
 /* body */
-.body { flex: 1; overflow-y: auto; padding: var(--stack) 0 96px; }
+.body { flex: 1; overflow-y: auto; padding: var(--stack) 0 calc(var(--s6) + var(--safe-b)); }
+.body.has-cta { padding-bottom: 96px; }
 .section { display: flex; align-items: center; gap: var(--s3); padding: var(--section) var(--gutter) var(--s2); font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.3px; text-transform: uppercase; }
 .body > .section:first-child { padding-top: 0; }
 .section .spacer { flex: 1; }
