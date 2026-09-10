@@ -191,9 +191,16 @@ function reviewHTML() {
   const p = target(); const existing = p.tracks.map(D.track).filter(Boolean);
   const dupes = S.selection.filter(s => inTarget(s.uri) && !S.keep.has(s.uri));
   const total = existing.reduce((a, t) => a + t.duration, 0) + S.selection.reduce((a, s) => a + (s.track.duration || 0), 0);
-  return `<div class="thead tappable" data-action="edit">${p.cover || p.image ? `<img class="art" src="${esc(p.cover || p.image)}" alt="">` : `<div class="art"></div>`}
-      <div class="meta"><div class="title">${esc(p.name)}</div>${p.description ? `<div class="sub">${esc(p.description)}</div>` : ""}<div class="sub">${p.total + newCount()} song${p.total + newCount() === 1 ? "" : "s"} · ${fmtDur(total)}</div></div>
-      <div class="thead-actions"><button class="switch" data-action="edit">Edit</button><button class="switch" data-action="switch">Switch</button></div></div>
+  const canCover = hasScope("ugc-image-upload"); const cover = p.cover || p.image;
+  return `<div class="thead inline-edit">
+      <label class="art cover ${canCover ? "" : "locked"}" for="cover-file" title="${canCover ? "Change cover" : "Log in again to change the cover"}">${cover ? `<img src="${esc(cover)}" alt="">` : `<span>+</span>`}</label>
+      <input id="cover-file" type="file" accept="image/*" hidden ${canCover ? "" : "disabled"}>
+      <div class="meta">
+        <input id="edit-name" class="title-edit" value="${esc(p.name)}" placeholder="Playlist name" autocomplete="off" maxlength="100" aria-label="Playlist name">
+        <input id="edit-desc" class="desc-edit" value="${esc(p.description || "")}" placeholder="Add description" autocomplete="off" maxlength="300" aria-label="Description">
+        <div class="sub">${p.total + newCount()} song${p.total + newCount() === 1 ? "" : "s"} · ${fmtDur(total)}</div>
+      </div>
+      <button class="switch" data-action="switch">Switch</button></div>
     ${dupes.map(s => `<div class="banner amber"><span>⚠︎ ${esc(s.track.name)} is already in this playlist</span><span class="spacer"></span><button data-keep="${esc(s.uri)}">Keep both</button><button data-remove="${esc(s.uri)}">Skip</button></div>`).join("")}
     ${S.selection.length ? `<div id="newlist">${S.selection.map(s => rowHTML(s.track, { mode: "review", sub: `${artists(s.track)} · from ${s.source}`, trail: inTarget(s.uri) ? { text: S.keep.has(s.uri) ? "dupe, keeping" : "dupe", cls: "amber" } : null })).join("")}</div>` : `<div class="empty">Let’s find something for your playlist</div>`}
     ${existing.length ? section(`In this playlist · ${existing.length}`) + existing.map(t => rowHTML(t, { mode: "plain", sub: artists(t) })).join("") : ""}`;
@@ -230,7 +237,6 @@ function render() {
   const sc = S.screen;
   if (sc.name === "start") { $app.innerHTML = startHTML(); return; }
   if (sc.name === "new") { $app.innerHTML = `<div class="head stacked"><button class="back" data-back aria-label="Back">‹</button></div>` + newHTML(); document.getElementById("pname")?.focus(); return; }
-  if (sc.name === "edit") { $app.innerHTML = `<div class="head stacked"><button class="back" data-back aria-label="Back">‹</button></div>` + editHTML(); return; }
   if (sc.name === "existing") { $app.innerHTML = headHTML("Your playlists", true) + existingHTML(); return; }
   if (!target()) { S.screen = { name: "start" }; S.stack = []; return render(); }
   const titles = { home: "Playlist Mode", search: "Search", playlist: D.playlist(sc.id)?.name || "Playlist", artist: lib.artists.get(sc.id)?.name || "Artist", "catalog-artist": sc.artist?.name || "Artist", artists: "Your artists", playlists: "Your playlists", recents: "Recently played", review: "Playlist Mode" };
@@ -291,8 +297,7 @@ $app.addEventListener("click", async (e) => {
     case "playlists": return go({ name: "playlists" });
     case "recents": return go({ name: "recents" });
     case "switch": S.sheet = "switch"; return render();
-    case "edit": S.edit = {}; return go({ name: "edit" });
-    case "add-desc": S.edit = { ...(S.edit || {}), descOpen: true }; render(); document.getElementById("edit-desc")?.focus(); return;
+    case "locked-cover": return login();
     case "relogin": return login();
     case "save-edit": {
       const p = target(); const name = (document.getElementById("edit-name")?.value || "").trim() || p.name; const description = (document.getElementById("edit-desc")?.value || "").trim();
@@ -331,10 +336,19 @@ $app.addEventListener("click", async (e) => {
   }
 });
 $app.addEventListener("change", async (e) => {
-  if (e.target.id !== "cover-file" || !e.target.files?.[0]) return;
-  try { const { base64, dataUrl } = await D.imageToJpegBase64(e.target.files[0]); S.edit = { ...(S.edit || {}), name: document.getElementById("edit-name")?.value, description: document.getElementById("edit-desc")?.value, base64, preview: dataUrl }; render(); }
-  catch (err) { toast(err.message); }
+  const p = target(); if (!p) return;
+  if (e.target.id === "cover-file" && e.target.files?.[0]) {
+    try { const { base64, dataUrl } = await D.imageToJpegBase64(e.target.files[0]); await D.uploadPlaylistCover(p.id, base64, dataUrl); render(); toast("Cover updated"); }
+    catch (err) { toast(err.status === 401 || err.status === 403 ? "Log in again to change the cover" : err.message); }
+    return;
+  }
+  if (e.target.id === "edit-name" || e.target.id === "edit-desc") {
+    const name = (document.getElementById("edit-name")?.value || "").trim() || p.name; const description = (document.getElementById("edit-desc")?.value || "").trim();
+    if (name === p.name && description === (p.description || "")) return;
+    try { await D.updatePlaylistDetails(p.id, { name, description }); render(); toast("Saved"); } catch (err) { toast(`Couldn’t save: ${err.message}`); }
+  }
 });
+$app.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.target.id === "edit-name" || e.target.id === "edit-desc")) e.target.blur(); });
 $app.addEventListener("input", (e) => {
   if (e.target.id === "q") {
     const q = e.target.value;
@@ -343,7 +357,6 @@ $app.addEventListener("input", (e) => {
     S.screen = { name: "search", q }; render(); catalogSearch(q);
   }
   if (e.target.id === "pf") { S.screen.filter = e.target.value; render(); }
-  if (e.target.id === "edit-name" || e.target.id === "edit-desc") { S.edit = { ...(S.edit || {}), [e.target.id === "edit-name" ? "name" : "description"]: e.target.value }; }
   if (e.target.id === "pname") { S.screen.value = e.target.value; const b = $app.querySelector("[data-action=create]"); if (b) b.disabled = !e.target.value.trim(); }
 });
 $app.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.id === "pname") $app.querySelector("[data-action=create]")?.click(); });
