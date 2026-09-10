@@ -141,6 +141,16 @@ export async function searchCatalog(q) {
   const r = await api(`/search?q=${encodeURIComponent(q)}&type=track&limit=20`);
   return (r?.tracks?.items || []).map(slimTrack);
 }
+// Songs + artists from the whole Spotify catalog.
+export async function searchAll(q) {
+  const r = await api(`/search?q=${encodeURIComponent(q)}&type=track,artist&limit=20`);
+  return {
+    tracks: (r?.tracks?.items || []).map(slimTrack),
+    artists: (r?.artists?.items || []).slice(0, 6).map(a => ({ id: a.id, name: a.name, image: a.images?.at(-1)?.url || "", followers: a.followers?.total || 0 })),
+  };
+}
+export async function artistInfo(id) { const a = await api(`/artists/${id}`); return { id: a.id, name: a.name, image: a.images?.[0]?.url || "" }; }
+export async function artistTopTracks(id) { const r = await api(`/artists/${id}/top-tracks?market=from_token`); return (r?.tracks || []).map(slimTrack); }
 
 // ---------- recommendations from your own library ----------
 // Songs in your other playlists, by artists already in the target (or your top artists if it's empty).

@@ -9,7 +9,7 @@ const S = {
   target: sessionStorage.getItem("qa.target") || null,   // chosen per session, never assumed
   selection: JSON.parse(sessionStorage.getItem("qa.sel") || "[]"), // [{uri, source, track}]
   keep: new Set(),
-  nowPlaying: null, recents: [], catalog: [], catalogQ: "",
+  nowPlaying: null, recents: [], catalog: { tracks: [], artists: [] }, catalogQ: "",
   ai: { status: "idle", items: [], error: "", forTarget: null, dismissed: new Set() }, // idle | loading | ready | error | nokey
   lastPublish: null, sheet: null, dragFrom: null,
 };
@@ -51,8 +51,7 @@ function toast(msg, action, fn, ms = 6000) {
 // ---------- shared pieces ----------
 function rowHTML(t, { mode = "plus", sub, trail, extra = "", cls = "" } = {}) {
   const inT = inTarget(t.uri), sel = isSelected(t.uri);
-  const where = D.playlistsFor(t.uri).filter(p => p.id !== S.target).map(p => p.name);
-  const subText = sub ?? [artists(t), where.length ? `in ${where.slice(0, 2).join(", ")}${where.length > 2 ? ` +${where.length - 2}` : ""}` : ""].filter(Boolean).join(" · ");
+  const subText = sub ?? artists(t);
   let ctrl = "";
   if (mode === "plus") ctrl = inT ? `<span class="plus done" title="Already in ${esc(target()?.name)}">✓</span>` : sel ? `<button class="plus pending" data-deselect="${esc(t.uri)}">✓</button>` : `<button class="plus" data-select="${esc(t.uri)}">+</button>`;
   else if (mode === "check") ctrl = inT ? `<span class="check on disabled">✓</span>` : `<span class="check ${sel ? "on" : ""}">${sel ? "✓" : ""}</span>`;
@@ -101,20 +100,17 @@ function existingHTML() { return `<div class="body" style="padding-top:6px">${li
 
 // ---------- home: suggestions ----------
 function homeHTML() {
-  const p = target(); const np = S.nowPlaying;
+  const p = target();
   return `<div class="thead">${p.image ? `<img class="art" src="${esc(p.image)}" alt="">` : `<div class="art"></div>`}
       <div class="meta"><div class="title">${esc(p.name)}</div><div class="sub">${p.total} songs${S.selection.length ? ` · ${S.selection.length} waiting to publish` : ""}</div></div>
       <button class="switch" data-action="switch">Switch ⌄</button></div>
     ${searchFieldHTML("")}
-    <div id="np">${np ? npCardHTML(np) : ""}</div>
-    ${aiSectionHTML()}
-    ${librarySectionHTML()}
-    ${section("Browse")}
     <div class="tiles">
       <button class="tile" data-action="playlists"><span class="tile-icon">☰</span><span class="tile-name">Your playlists</span><span class="tile-sub">${lib.playlists.length}</span></button>
       <button class="tile" data-action="recents"><span class="tile-icon">↺</span><span class="tile-name">Recently played</span><span class="tile-sub">${S.recents.length || "…"}</span></button>
       <button class="tile" data-action="artists"><span class="tile-icon">♪</span><span class="tile-name">Your artists</span><span class="tile-sub">${lib.artists.size}</span></button>
-    </div>`;
+    </div>
+    ${librarySectionHTML()}`;
 }
 function aiSectionHTML() {
   const a = S.ai, p = target();
@@ -129,7 +125,7 @@ function aiSectionHTML() {
 function librarySectionHTML() {
   const recs = D.libraryRecs(S.target, 8);
   if (!recs.length) return "";
-  return section("From your other playlists") + recs.map(t => rowHTML(t, { sub: t.reason })).join("");
+  return section("From your other playlists") + recs.map(t => rowHTML(t, { sub: artists(t) })).join("");
 }
 function npCardHTML(np) {
   const t = np.track, inT = inTarget(t.uri), sel = isSelected(t.uri);
@@ -153,16 +149,19 @@ async function loadSuggestions(force = false) {
 // ---------- browse screens ----------
 function searchHTML() {
   const q = S.screen.q || "";
-  const lists = D.searchPlaylists(q), libHits = D.searchLibrary(q);
-  const catalog = S.catalogQ === q ? S.catalog : [];
-  const catUris = new Set(catalog.map(t => t.uri)); const extraLib = libHits.filter(t => !catUris.has(t.uri));
-  const selectable = [...catalog, ...extraLib].filter(t => !inTarget(t.uri) && !isSelected(t.uri));
-  const catRow = (t) => rowHTML(t);
+  const ready = S.catalogQ === q; const res = ready ? S.catalog : { tracks: [], artists: [] };
+  const selectable = res.tracks.filter(t => !inTarget(t.uri) && !isSelected(t.uri));
   return `${searchFieldHTML(q)}
-    ${lists.length ? section("Your playlists") + lists.map(p => playlistRowHTML(p)).join("") : ""}
-    ${section(catalog.length ? `Songs · ${catalog.length}` : "Songs", selectable.length > 1 ? { id: "selectall", label: `Select all ${selectable.length}` } : null)}
-    <div id="catalog">${catalog.length ? catalog.map(catRow).join("") : S.catalogQ === q ? `<div class="empty">No results on Spotify for “${esc(q)}”.</div>` : (libHits.length ? libHits.slice(0, 8).map(catRow).join("") : `<div class="empty">Searching Spotify…</div>`)}</div>
-    ${catalog.length && extraLib.length ? section(`Also in your playlists · ${extraLib.length}`) + extraLib.map(catRow).join("") : ""}`;
+    ${res.artists.length ? section("Artists") + `<div class="hscroll">${res.artists.map(a => `<button class="artist" data-open-catalog-artist="${esc(a.id)}"><div class="avatar">${a.image ? `<img src="${esc(a.image)}" alt="">` : esc(initials(a.name))}</div><div class="name">${esc(a.name)}</div></button>`).join("")}</div>` : ""}
+    ${section(res.tracks.length ? `Songs · ${res.tracks.length}` : "Songs", selectable.length > 1 ? { id: "selectall", label: `Select all ${selectable.length}` } : null)}
+    <div id="catalog">${res.tracks.length ? res.tracks.map(t => rowHTML(t, { sub: artists(t) })).join("") : ready ? `<div class="empty">No results on Spotify for “${esc(q)}”.</div>` : `<div class="empty">Searching Spotify…</div>`}</div>`;
+}
+function catalogArtistHTML() {
+  const a = S.screen.artist; const tracks = S.screen.tracks || null;
+  const selectable = (tracks || []).filter(t => !inTarget(t.uri) && !isSelected(t.uri));
+  return `<div class="thead">${a.image ? `<img class="art" style="border-radius:50%" src="${esc(a.image)}" alt="">` : `<div class="art"></div>`}<div class="meta"><div class="title">${esc(a.name)}</div><div class="sub">Popular on Spotify</div></div></div>
+    ${section("Top songs", selectable.length > 1 ? { id: "selectall", label: `Select all ${selectable.length}` } : null)}
+    ${tracks ? (tracks.length ? tracks.map(t => rowHTML(t, { sub: t.album })).join("") : `<div class="empty">No songs found.</div>`) : `<div class="empty">Loading…</div>`}`;
 }
 function playlistHTML() {
   const p = D.playlist(S.screen.id); if (!p) return `<div class="empty">Playlist not found.</div>`;
@@ -220,10 +219,10 @@ function render() {
   if (sc.name === "new") { $app.innerHTML = `<div class="head stacked"><button class="back" data-back aria-label="Back">‹</button></div>` + newHTML(); document.getElementById("pname")?.focus(); return; }
   if (sc.name === "existing") { $app.innerHTML = headHTML("Your playlists", true) + existingHTML(); return; }
   if (!target()) { S.screen = { name: "start" }; S.stack = []; return render(); }
-  const titles = { home: "Playlist Mode", search: "Search", playlist: D.playlist(sc.id)?.name || "Playlist", artist: lib.artists.get(sc.id)?.name || "Artist", artists: "Your artists", playlists: "Your playlists", recents: "Recently played", review: "Playlist Mode" };
-  const bodies = { home: homeHTML, search: searchHTML, playlist: playlistHTML, artist: artistHTML, artists: artistsHTML, playlists: playlistsHTML, recents: recentsHTML, review: reviewHTML };
+  const titles = { home: "Playlist Mode", search: "Search", playlist: D.playlist(sc.id)?.name || "Playlist", artist: lib.artists.get(sc.id)?.name || "Artist", "catalog-artist": sc.artist?.name || "Artist", artists: "Your artists", playlists: "Your playlists", recents: "Recently played", review: "Playlist Mode" };
+  const bodies = { home: homeHTML, search: searchHTML, playlist: playlistHTML, artist: artistHTML, "catalog-artist": catalogArtistHTML, artists: artistsHTML, playlists: playlistsHTML, recents: recentsHTML, review: reviewHTML };
   const withBack = !["home", "review"].includes(sc.name);
-  const right = withBack ? "" : `<button class="kbd" data-action="settings" title="Claude API key">⚙︎</button><button class="kbd" data-action="reload" title="Reload library">↻</button>`;
+  const right = withBack ? "" : `<button class="kbd" data-action="reload" title="Reload library">↻</button>`;
   const active = document.activeElement?.id, selStart = document.activeElement?.selectionStart;
   $app.innerHTML = `${headHTML(titles[sc.name], withBack, right)}${segHTML()}<div class="body">${bodies[sc.name]()}</div>${ctaHTML()}${sheetHTML()}`;
   if (active) { const el = document.getElementById(active); if (el) { el.focus(); try { el.setSelectionRange(selStart, selStart); } catch {} } }
@@ -231,11 +230,11 @@ function render() {
 
 // ---------- events ----------
 $app.addEventListener("click", async (e) => {
-  const t = e.target.closest("[data-select],[data-deselect],[data-toggle],[data-remove],[data-keep],[data-dismiss],[data-open-playlist],[data-open-artist],[data-set-target],[data-chip],[data-back],[data-action]");
+  const t = e.target.closest("[data-select],[data-deselect],[data-toggle],[data-remove],[data-keep],[data-dismiss],[data-open-playlist],[data-open-artist],[data-open-catalog-artist],[data-set-target],[data-chip],[data-back],[data-action]");
   if (!t) return;
   const d = t.dataset;
-  const trackOf = (uri) => D.track(uri) || S.recents.find(x => x.uri === uri) || S.catalog.find(x => x.uri === uri) || S.ai.items.find(x => x.uri === uri) || (S.nowPlaying?.track.uri === uri ? S.nowPlaying.track : null);
-  const sourceName = (uri) => S.nowPlaying?.track.uri === uri ? "now playing" : S.ai.items.some(x => x.uri === uri) && S.screen.name === "home" ? "Claude's suggestion" : ({ home: "your playlists", recents: "recents", search: "search", playlist: D.playlist(S.screen.id)?.name, artist: lib.artists.get(S.screen.id)?.name })[S.screen.name] || "library";
+  const trackOf = (uri) => D.track(uri) || S.recents.find(x => x.uri === uri) || S.catalog.tracks.find(x => x.uri === uri) || (S.screen.tracks || []).find(x => x.uri === uri) || S.ai.items.find(x => x.uri === uri) || (S.nowPlaying?.track.uri === uri ? S.nowPlaying.track : null);
+  const sourceName = (uri) => S.nowPlaying?.track.uri === uri ? "now playing" : S.ai.items.some(x => x.uri === uri) && S.screen.name === "home" ? "Claude's suggestion" : ({ home: "your playlists", recents: "recents", search: "search", playlist: D.playlist(S.screen.id)?.name, artist: lib.artists.get(S.screen.id)?.name, "catalog-artist": S.screen.artist?.name })[S.screen.name] || "library";
   if (d.select) { const tr = trackOf(d.select); if (tr) select(tr, sourceName(d.select)); return; }
   if (d.deselect) return deselect(d.deselect);
   if (d.toggle) { const tr = trackOf(d.toggle); if (tr) toggle(tr, sourceName(d.toggle)); return; }
@@ -244,6 +243,12 @@ $app.addEventListener("click", async (e) => {
   if (d.dismiss) { S.ai.dismissed.add(d.dismiss); return render(); }
   if (d.openPlaylist) return go({ name: "playlist", id: d.openPlaylist });
   if (d.openArtist) return go({ name: "artist", id: d.openArtist });
+  if (d.openCatalogArtist) {
+    const a = S.catalog.artists.find(x => x.id === d.openCatalogArtist) || { id: d.openCatalogArtist, name: "Artist", image: "" };
+    const screen = { name: "catalog-artist", artist: a, tracks: null }; go(screen);
+    D.artistTopTracks(a.id).then(tr => { if (S.screen === screen) { screen.tracks = tr; render(); } }).catch(err => { screen.tracks = []; render(); toast(err.message); });
+    return;
+  }
   if (d.setTarget) { setTarget(d.setTarget); S.sheet = null; S.selection = []; persistSel(); home(); return; }
   if (d.chip !== undefined) { S.screen.artist = d.chip || null; return render(); }
   if (t.hasAttribute("data-back")) return back();
@@ -273,7 +278,8 @@ $app.addEventListener("click", async (e) => {
       let tracks = [];
       if (S.screen.name === "playlist") { const p = D.playlist(S.screen.id); tracks = p.tracks.map(D.track).filter(Boolean); if (S.screen.artist) tracks = tracks.filter(x => x.artists.some(a => a.id === S.screen.artist)); if (S.screen.filter) tracks = tracks.filter(x => matches(x, S.screen.filter)); }
       else if (S.screen.name === "artist") tracks = D.artistTracks(S.screen.id);
-      else if (S.screen.name === "search") { const cat = S.catalogQ === S.screen.q ? S.catalog : []; const cu = new Set(cat.map(x => x.uri)); tracks = [...cat, ...D.searchLibrary(S.screen.q).filter(x => !cu.has(x.uri))]; }
+      else if (S.screen.name === "search") tracks = S.catalogQ === S.screen.q ? S.catalog.tracks : [];
+      else if (S.screen.name === "catalog-artist") tracks = S.screen.tracks || [];
       for (const tr of tracks) if (!inTarget(tr.uri) && !isSelected(tr.uri)) S.selection.push({ uri: tr.uri, source: sourceName(tr.uri), track: tr });
       persistSel(); return render();
     }
@@ -296,7 +302,7 @@ $app.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.id =
 let catalogTimer;
 function catalogSearch(q) {
   clearTimeout(catalogTimer);
-  catalogTimer = setTimeout(async () => { try { const r = await D.searchCatalog(q); if (S.screen.name === "search" && S.screen.q === q) { S.catalog = r; S.catalogQ = q; render(); } } catch (e) { console.warn(e); } }, 350);
+  catalogTimer = setTimeout(async () => { try { const r = await D.searchAll(q); if (S.screen.name === "search" && S.screen.q === q) { S.catalog = r; S.catalogQ = q; render(); } } catch (e) { console.warn(e); } }, 350);
 }
 // drag-to-reorder in review
 $app.addEventListener("pointerdown", (e) => { const h = e.target.closest("[data-handle]"); if (!h) return; const row = h.closest(".row"); S.dragFrom = row.dataset.uri; row.classList.add("dragging"); h.setPointerCapture(e.pointerId); e.preventDefault(); });
@@ -352,8 +358,7 @@ async function boot(force = false) {
   S.screen = S.target ? { name: "home" } : { name: "start" }; S.stack = [];
   render();
   D.recentlyPlayed().then(r => { S.recents = r; if (S.screen.name === "home") render(); }).catch(console.warn);
-  pollNowPlaying();
-  if (S.target) loadSuggestions();
+  // now-playing capture and Claude suggestions are parked for now (see decisions log)
 }
 document.addEventListener("click", (e) => { if (e.target.closest("[data-login]")) login(); if (e.target.closest("[data-reload]")) boot(true); });
 boot();
