@@ -192,7 +192,7 @@ function reviewHTML() {
   const dupes = S.selection.filter(s => inTarget(s.uri) && !S.keep.has(s.uri));
   const total = existing.reduce((a, t) => a + t.duration, 0) + S.selection.reduce((a, s) => a + (s.track.duration || 0), 0);
   return `<div class="thead tappable" data-action="edit">${p.cover || p.image ? `<img class="art" src="${esc(p.cover || p.image)}" alt="">` : `<div class="art"></div>`}
-      <div class="meta"><div class="title">${esc(p.name)}</div>${p.description ? `<div class="sub">${esc(p.description)}</div>` : ""}<div class="sub">${p.total + newCount()} songs · ${fmtDur(total)}${S.selection.length ? ` · ${newCount()} unpublished` : ""}</div></div>
+      <div class="meta"><div class="title">${esc(p.name)}</div>${p.description ? `<div class="sub">${esc(p.description)}</div>` : ""}<div class="sub">${p.total + newCount()} song${p.total + newCount() === 1 ? "" : "s"} · ${fmtDur(total)}</div></div>
       <div class="thead-actions"><button class="switch" data-action="edit">Edit</button><button class="switch" data-action="switch">Switch</button></div></div>
     ${dupes.map(s => `<div class="banner amber"><span>⚠︎ ${esc(s.track.name)} is already in this playlist</span><span class="spacer"></span><button data-keep="${esc(s.uri)}">Keep both</button><button data-remove="${esc(s.uri)}">Skip</button></div>`).join("")}
     ${S.selection.length ? `<div id="newlist">${S.selection.map(s => rowHTML(s.track, { mode: "review", sub: `${artists(s.track)} · from ${s.source}`, trail: inTarget(s.uri) ? { text: S.keep.has(s.uri) ? "dupe, keeping" : "dupe", cls: "amber" } : null })).join("")}</div>` : `<div class="empty">Let’s find something for your playlist</div>`}
