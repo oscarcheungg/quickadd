@@ -10,7 +10,8 @@ const S = {
   selection: JSON.parse(sessionStorage.getItem("qa.sel") || "[]"), // [{uri, source, track}]
   keep: new Set(),
   nowPlaying: null, recents: [], catalog: { tracks: [], artists: [] }, catalogQ: "",
-  ai: { status: "idle", items: [], error: "", forTarget: null, dismissed: new Set() }, // idle | loading | ready | error | nokey
+  ai: { status: "idle", items: [], error: "", forTarget: null, dismissed: new Set() }, // parked
+  recs: { status: "idle", items: [], key: null }, top: [],
   lastPublish: null, sheet: null, dragFrom: null,
 };
 const $app = document.getElementById("app");
@@ -31,12 +32,12 @@ function select(track, source) { if (isSelected(track.uri)) return; S.selection.
 function deselect(uri) { S.selection = S.selection.filter(s => s.uri !== uri); persistSel(); render(); }
 function toggle(track, source) { isSelected(track.uri) ? deselect(track.uri) : select(track, source); }
 const newCount = () => S.selection.filter(s => !inTarget(s.uri) || S.keep.has(s.uri)).length;
-function setTarget(id) { S.target = id; sessionStorage.setItem("qa.target", id); S.keep = new Set(); S.ai = { status: "idle", items: [], error: "", forTarget: null, dismissed: new Set() }; }
+function setTarget(id) { S.target = id; sessionStorage.setItem("qa.target", id); S.keep = new Set(); S.recs = { status: "idle", items: [], key: null }; S.ai = { status: "idle", items: [], error: "", forTarget: null, dismissed: new Set() }; }
 
 // ---------- navigation ----------
 function go(screen) { S.stack.push(S.screen); S.screen = screen; render(); $app.querySelector(".body")?.scrollTo(0, 0); }
 function back() { S.screen = S.stack.pop() || { name: "home" }; render(); }
-function home() { S.stack = []; S.screen = { name: "home" }; render(); loadSuggestions(); }
+function home() { S.stack = []; S.screen = { name: "home" }; render(); loadRecs(); }
 
 // ---------- toast ----------
 let toastTimer;
@@ -121,9 +122,21 @@ function aiSectionHTML() {
   return head + items.map(t => rowHTML(t, { sub: t.reason, extra: `<button class="x" data-dismiss="${esc(t.uri)}" title="Not this one">✕</button>` })).join("");
 }
 function librarySectionHTML() {
-  const recs = D.libraryRecs(S.target, 8);
-  if (!recs.length) return "";
-  return section("From your other playlists") + recs.map(t => rowHTML(t, { sub: artists(t) })).join("");
+  const r = S.recs;
+  if (r.status === "loading" && !r.items.length) return section("Recommended for you") + `<div class="empty">Finding songs…</div>`;
+  if (!r.items.length) return "";
+  return section("Recommended for you", { id: "recs-refresh", label: "Refresh" }) + r.items.map(t => rowHTML(t, { sub: artists(t) })).join("");
+}
+async function loadRecs(force = false) {
+  const p = target(); if (!p) return;
+  const key = `${p.id}:${p.tracks.length}`; if (!force && S.recs.key === key && S.recs.status === "ready") return;
+  S.recs.status = "loading"; S.recs.key = key; if (S.screen.name === "home") render();
+  try {
+    if (!S.top.length) S.top = await D.topTracks("short_term", 50).catch(() => []);
+    const items = await D.recommend(p.id, { recents: S.recents, top: S.top }, 12);
+    if (S.recs.key !== key) return; S.recs.items = items.filter(t => !isSelected(t.uri)); S.recs.status = "ready";
+  } catch (e) { console.warn(e); S.recs.status = "ready"; }
+  if (S.screen.name === "home") render();
 }
 function npCardHTML(np) {
   const t = np.track, inT = inTarget(t.uri), sel = isSelected(t.uri);
@@ -265,7 +278,7 @@ $app.addEventListener("click", async (e) => {
   if (!t) return;
   const d = t.dataset;
   const trackOf = (uri) => D.track(uri) || S.recents.find(x => x.uri === uri) || S.catalog.tracks.find(x => x.uri === uri) || (S.screen.tracks || []).find(x => x.uri === uri) || S.ai.items.find(x => x.uri === uri) || (S.nowPlaying?.track.uri === uri ? S.nowPlaying.track : null);
-  const sourceName = (uri) => S.nowPlaying?.track.uri === uri ? "now playing" : S.ai.items.some(x => x.uri === uri) && S.screen.name === "home" ? "Claude's suggestion" : ({ home: "your playlists", recents: "recents", search: "search", playlist: D.playlist(S.screen.id)?.name, artist: lib.artists.get(S.screen.id)?.name, "catalog-artist": S.screen.artist?.name })[S.screen.name] || "library";
+  const sourceName = (uri) => S.nowPlaying?.track.uri === uri ? "now playing" : S.ai.items.some(x => x.uri === uri) && S.screen.name === "home" ? "Claude's suggestion" : ({ home: "recommendations", recents: "recents", search: "search", playlist: D.playlist(S.screen.id)?.name, artist: lib.artists.get(S.screen.id)?.name, "catalog-artist": S.screen.artist?.name })[S.screen.name] || "library";
   if (d.select) { const tr = trackOf(d.select); if (tr) select(tr, sourceName(d.select)); return; }
   if (d.deselect) return deselect(d.deselect);
   if (d.toggle) { const tr = trackOf(d.toggle); if (tr) toggle(tr, sourceName(d.toggle)); return; }
@@ -318,6 +331,7 @@ $app.addEventListener("click", async (e) => {
     case "savekey": AI.setKey(document.getElementById("akey")?.value || ""); AI.resetClient(); S.sheet = null; S.ai.status = "idle"; render(); loadSuggestions(true); return;
     case "clearkey": AI.setKey(""); AI.resetClient(); S.sheet = null; S.ai = { status: "idle", items: [], error: "", forTarget: null, dismissed: new Set() }; return render();
     case "ai-refresh": return loadSuggestions(true);
+    case "recs-refresh": D.recCacheClear?.(); return loadRecs(true);
     case "more-results": {
       const q = S.screen.q; if (S.catalog.loading) return; S.catalog.loading = true; render();
       try { const more = await D.searchCatalog(q, S.catalog.tracks.length); if (S.catalogQ === q) { S.catalog.tracks.push(...more.filter(t => !S.catalog.tracks.some(x => x.uri === t.uri))); S.catalog.done = more.length < 10; } }
@@ -389,7 +403,7 @@ async function publish() {
     for (let i = 0; i < items.length; i += 100) await api(`/playlists/${p.id}/items`, { method: "POST", body: { uris: items.slice(i, i + 100).map(s => s.uri) } });
     D.addToPlaylistLocal(p.id, items.map(s => s.track));
     S.lastPublish = { playlistId: p.id, uris: items.map(s => s.uri) };
-    S.selection = []; S.keep = new Set(); persistSel(); S.ai.items = S.ai.items.filter(t => !inTarget(t.uri)); render();
+    S.selection = []; S.keep = new Set(); persistSel(); S.recs.items = S.recs.items.filter(t => !inTarget(t.uri)); render();
     toast(`Added ${items.length} to ${p.name}`, "Undo", undoPublish, 8000);
   } catch (e) { render(); toast(`Publish failed: ${e.message}`); }
 }
@@ -422,7 +436,7 @@ async function boot(force = false) {
   S.selection = S.selection.filter(s => s.track);
   S.screen = S.target ? { name: "home" } : { name: "start" }; S.stack = [];
   render();
-  D.recentlyPlayed().then(r => { S.recents = r; if (S.screen.name === "home") render(); }).catch(console.warn);
+  D.recentlyPlayed().then(r => { S.recents = r; if (S.screen.name === "home") render(); }).catch(console.warn).finally(() => { if (S.target) loadRecs(); });
   // now-playing capture and Claude suggestions are parked for now (see decisions log)
 }
 document.addEventListener("click", (e) => { if (e.target.closest("[data-login]")) login(); if (e.target.closest("[data-reload]")) boot(true); });

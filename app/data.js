@@ -229,3 +229,41 @@ export function imageToJpegBase64(file, size = 640) {
     img.src = url;
   });
 }
+
+// ---------- recommendations: playlist + listening history, no external model ----------
+export async function topTracks(range = "short_term", limit = 50) {
+  const r = await api(`/me/top/tracks?limit=${limit}&time_range=${range}`); return (r?.items || []).map(slimTrack);
+}
+const recCache = new Map();
+export function recCacheClear() { recCache.clear(); }
+// Signals: artists in the target (weight by count), recent plays, top tracks, library presence, catalog hits for the top target artists.
+export async function recommend(targetId, { recents = [], top = [] } = {}, n = 12) {
+  const t = playlist(targetId); if (!t) return [];
+  const key = `${targetId}:${t.tracks.length}:${recents.length}:${top.length}`;
+  if (recCache.has(key)) return recCache.get(key);
+  const inT = new Set(t.tracks);
+  const artistW = new Map();
+  for (const uri of t.tracks) for (const a of track(uri)?.artists || []) artistW.set(a.id, { name: a.name, w: (artistW.get(a.id)?.w || 0) + 1 });
+  const empty = artistW.size === 0;
+  if (empty) for (const a of topArtists(6)) artistW.set(a.id, { name: a.name, w: 1 });
+  const recentRank = new Map(recents.map((x, i) => [x.uri, i])); const topRank = new Map(top.map((x, i) => [x.uri, i]));
+  const cand = new Map();
+  const add = (tr, score, why) => { if (!tr?.uri || inT.has(tr.uri)) return; const c = cand.get(tr.uri) || { ...tr, score: 0, why: new Set() }; c.score += score; c.why.add(why); cand.set(tr.uri, c); };
+  const artistScore = (tr) => tr.artists.reduce((m, a) => Math.max(m, artistW.get(a.id)?.w || 0), 0);
+  // 1. your library, by artists in the playlist
+  for (const tr of lib.tracks.values()) { const s = artistScore(tr); if (s) add(tr, s * 2 + Math.min(3, playlistsFor(tr.uri).length), "library"); }
+  // 2. listening history
+  recents.forEach((tr, i) => add(tr, 6 - i * 0.1 + artistScore(tr) * 2, "recent"));
+  top.forEach((tr, i) => add(tr, 5 - i * 0.08 + artistScore(tr) * 2, "top"));
+  // 3. catalog: popular songs by the playlist's main artists (or your top artists when empty)
+  const mains = [...artistW.entries()].sort((a, b) => b[1].w - a[1].w).slice(0, empty ? 4 : 3);
+  const pages = await Promise.all(mains.map(([id, a]) => searchCatalog(`artist:${a.name}`, 0).then(r => r.filter(x => x.artists.some(y => y.id === id))).catch(() => [])));
+  pages.forEach((list, pi) => list.forEach((tr, i) => add(tr, (mains[pi][1].w * 1.5) + (4 - i * 0.3), "catalog")));
+  // rank, then keep artist variety: at most 3 per lead artist
+  const perArtist = new Map(); const out = [];
+  for (const c of [...cand.values()].sort((a, b) => b.score - a.score)) {
+    const lead = c.artists[0]?.id; const k = perArtist.get(lead) || 0; if (k >= 3) continue; perArtist.set(lead, k + 1);
+    out.push(c); if (out.length >= n) break;
+  }
+  recCache.set(key, out); return out;
+}
