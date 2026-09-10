@@ -67,7 +67,8 @@ function rowHTML(t, { mode = "plus", sub, trail, extra = "", cls = "" } = {}) {
 const section = (label, action) => `<div class="section"><span>${esc(label)}</span><span class="spacer"></span>${action ? `<button data-action="${esc(action.id)}">${esc(action.label)}</button>` : ""}</div>`;
 const playlistRowHTML = (p, attr = "data-open-playlist") => `<div class="row tappable" ${attr}="${esc(p.id)}">${p.image ? `<img class="art" src="${esc(p.image)}" alt="">` : `<div class="art"></div>`}
     <div class="meta"><div class="title ${p.id === S.target ? "in-target" : ""}">${esc(p.name)}</div><div class="sub">${p.total} song${p.total === 1 ? "" : "s"}${p.lastAdded ? ` · edited ${ago(new Date(p.lastAdded).toISOString())}` : ""}</div></div><span class="chev">›</span></div>`;
-const artistCardHTML = (a) => `<button class="artist" data-open-artist="${esc(a.id)}"><div class="avatar">${esc(initials(a.name))}</div><div class="name">${esc(a.name)}</div><div class="count">${a.uris.size} saved</div></button>`;
+const avatarHTML = (id, name, cls = "avatar") => { const url = D.artistImageCached(id); return `<div class="${cls}" data-artist-img="${esc(id)}">${url ? `<img src="${esc(url)}" alt="">` : esc(initials(name))}</div>`; };
+const artistCardHTML = (a) => `<button class="artist" data-open-artist="${esc(a.id)}">${avatarHTML(a.id, a.name)}<div class="name">${esc(a.name)}</div><div class="count">${a.uris.size} saved</div></button>`;
 const bannerHTML = () => { const p = target(); return p ? `<div class="mode-banner"><span class="label">Editing</span><span class="name">“${esc(p.name)}”</span></div>` : ""; };
 const headHTML = (title, withBack, right = "") => withBack
   ? `<div class="head stacked"><button class="back" data-back aria-label="Back">‹</button><h1>${esc(title)}</h1></div>`
@@ -177,10 +178,11 @@ function artistHTML() {
   const a = lib.artists.get(S.screen.id); if (!a) return `<div class="empty">Artist not found.</div>`;
   const tracks = D.artistTracks(a.id), lists = new Set(tracks.flatMap(t => D.playlistsFor(t.uri).map(p => p.id)));
   const selectable = tracks.filter(t => !inTarget(t.uri) && !isSelected(t.uri));
-  return `${section(`${tracks.length} songs across ${lists.size} playlists`, selectable.length > 1 ? { id: "selectall", label: `Select all ${selectable.length}` } : null)}
+  return `<div class="thead">${avatarHTML(a.id, a.name, "art avatar big")}<div class="meta"><div class="title">${esc(a.name)}</div><div class="sub">${a.uris.size} saved</div></div></div>
+    ${section(`${tracks.length} songs across ${lists.size} playlists`, selectable.length > 1 ? { id: "selectall", label: `Select all ${selectable.length}` } : null)}
     ${tracks.map(t => rowHTML(t, { mode: "check", sub: D.playlistsFor(t.uri).map(p => p.name).join(", ") })).join("")}`;
 }
-const artistsHTML = () => `${section("By songs saved")}${D.topArtists(200).map(a => `<div class="row tappable" data-open-artist="${esc(a.id)}"><div class="art round" style="display:grid;place-items:center;font-weight:700;color:var(--muted)">${esc(initials(a.name))}</div><div class="meta"><div class="title">${esc(a.name)}</div><div class="sub">${a.uris.size} saved</div></div><span class="chev">›</span></div>`).join("")}`;
+const artistsHTML = () => `${section("By songs saved")}${D.topArtists(200).map(a => `<div class="row tappable" data-open-artist="${esc(a.id)}">${avatarHTML(a.id, a.name, "art round avatar")}<div class="meta"><div class="title">${esc(a.name)}</div><div class="sub">${a.uris.size} saved</div></div><span class="chev">›</span></div>`).join("")}`;
 const playlistsHTML = () => `${section("Last edited first")}${lib.playlists.map(p => playlistRowHTML(p)).join("")}`;
 const recentsHTML = () => S.recents.length ? `${section("Last 50 plays")}${S.recents.map(t => rowHTML(t, { sub: `${artists(t)} · ${ago(t.playedAt)}` })).join("")}` : `<div class="empty">No recent plays</div>`;
 
@@ -224,7 +226,16 @@ function render() {
   const active = document.activeElement?.id, selStart = document.activeElement?.selectionStart;
   $app.innerHTML = `${headHTML(titles[sc.name], withBack, right)}${segHTML()}<div class="body">${bodies[sc.name]()}</div>${ctaHTML()}${sheetHTML()}`;
   if (active) { const el = document.getElementById(active); if (el) { el.focus(); try { el.setSelectionRange(selStart, selStart); } catch {} } }
+  lazyArtistImages();
 }
+// Load artist photos only for avatars that are on screen.
+const imgObserver = new IntersectionObserver((entries) => {
+  for (const e of entries) {
+    if (!e.isIntersecting) continue; const el = e.target; imgObserver.unobserve(el);
+    D.artistImage(el.dataset.artistImg).then(url => { if (url && el.isConnected && !el.querySelector("img")) el.innerHTML = `<img src="${esc(url)}" alt="">`; });
+  }
+}, { rootMargin: "200px" });
+function lazyArtistImages() { for (const el of $app.querySelectorAll("[data-artist-img]")) if (!el.querySelector("img")) imgObserver.observe(el); }
 
 // ---------- events ----------
 $app.addEventListener("click", async (e) => {

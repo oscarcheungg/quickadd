@@ -187,3 +187,17 @@ export async function createPlaylist(name) {
   lib.playlists.unshift(entry); save();
   return entry;
 }
+
+// ---------- artist photos ----------
+// /artists?ids= (batch) is 403 for this app; /artists/{id} works. Fetch one at a time, lazily, and cache.
+const IMG_KEY = "qa.artistImg.v1";
+let imgCache = null; const imgPending = new Map();
+function loadImgCache() { if (!imgCache) { try { imgCache = JSON.parse(localStorage.getItem(IMG_KEY)) || {}; } catch { imgCache = {}; } } return imgCache; }
+export function artistImageCached(id) { return loadImgCache()[id] ?? null; }
+export function artistImage(id) {
+  const c = loadImgCache(); if (id in c) return Promise.resolve(c[id]);
+  if (imgPending.has(id)) return imgPending.get(id);
+  const p = api(`/artists/${id}`).then(a => { const url = a?.images?.at(-1)?.url || ""; c[id] = url; try { localStorage.setItem(IMG_KEY, JSON.stringify(c)); } catch {} return url; })
+    .catch(() => "").finally(() => imgPending.delete(id));
+  imgPending.set(id, p); return p;
+}
