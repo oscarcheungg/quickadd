@@ -50,9 +50,11 @@ input { font: inherit; }
 .row .title.in-target { color: var(--green); }
 .row .sub { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
 .row .trail { font-size: 12px; font-weight: 600; color: var(--muted); flex: none; }
-.row .plus { width: 34px; height: 34px; border-radius: 50%; background: #fff; color: #000; font-size: 20px; font-weight: 700; display: grid; place-items: center; flex: none; }
-.row .plus.done { background: transparent; color: var(--green); font-size: 18px; }
-.row .plus.pending { background: var(--green); color: var(--green-ink); }
+.row .plus { width: 40px; height: 40px; border-radius: 50%; background: transparent; color: #fff; font-size: 26px; font-weight: 500; line-height: 1; display: grid; place-items: center; flex: none; }
+.row .plus:active { background: var(--row); }
+.row .plus.done { color: var(--green); font-size: 18px; font-weight: 700; }
+.row .plus.pending { color: var(--green); font-size: 16px; font-weight: 700; box-shadow: inset 0 0 0 1.5px var(--green); }
+.more { display: flex; justify-content: center; padding: 8px 16px 16px; }
 .row .check { width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid var(--muted); flex: none; display: grid; place-items: center; font-size: 13px; font-weight: 700; color: var(--green-ink); }
 .row .check.on { background: var(--green); border-color: var(--green); }
 .row .check.disabled { opacity: 0.35; }

@@ -137,20 +137,28 @@ export async function recentlyPlayed() {
   for (const it of r?.items || []) { if (!it.track?.uri || seen.has(it.track.uri)) continue; seen.add(it.track.uri); out.push({ ...slimTrack(it.track), playedAt: it.played_at }); }
   return out;
 }
-export async function searchCatalog(q) {
-  const r = await api(`/search?q=${encodeURIComponent(q)}&type=track&limit=20`);
+// NOTE: Spotify caps search at limit=10 per call for this app (11+ → 400 "Invalid limit"),
+// and combined type=track,artist calls are flaky. So: separate calls, page with offset.
+export async function searchCatalog(q, offset = 0) {
+  const r = await api(`/search?q=${encodeURIComponent(q)}&type=track&limit=10&offset=${offset}`);
   return (r?.tracks?.items || []).map(slimTrack);
 }
-// Songs + artists from the whole Spotify catalog.
-export async function searchAll(q) {
-  const r = await api(`/search?q=${encodeURIComponent(q)}&type=track,artist&limit=20`);
-  return {
-    tracks: (r?.tracks?.items || []).map(slimTrack),
-    artists: (r?.artists?.items || []).slice(0, 6).map(a => ({ id: a.id, name: a.name, image: a.images?.at(-1)?.url || "", followers: a.followers?.total || 0 })),
-  };
+export async function searchArtists(q) {
+  const r = await api(`/search?q=${encodeURIComponent(q)}&type=artist&limit=6`);
+  return (r?.artists?.items || []).map(a => ({ id: a.id, name: a.name, image: a.images?.at(-1)?.url || "", followers: a.followers?.total || 0 }));
 }
-export async function artistInfo(id) { const a = await api(`/artists/${id}`); return { id: a.id, name: a.name, image: a.images?.[0]?.url || "" }; }
-export async function artistTopTracks(id) { const r = await api(`/artists/${id}/top-tracks?market=from_token`); return (r?.tracks || []).map(slimTrack); }
+// Songs + artists from the whole Spotify catalog, first page.
+export async function searchAll(q) {
+  const [tracks, artists] = await Promise.all([searchCatalog(q, 0), searchArtists(q).catch(() => [])]);
+  return { tracks, artists };
+}
+// /artists/{id}/top-tracks is 403 for this app, so use an artist-filtered song search (2 pages).
+export async function artistTopTracks(id, name) {
+  const q = `artist:${name}`;
+  const [a, b] = await Promise.all([searchCatalog(q, 0), searchCatalog(q, 10).catch(() => [])]);
+  const seen = new Set();
+  return [...a, ...b].filter(t => t.artists.some(x => x.id === id) && !seen.has(t.uri) && seen.add(t.uri));
+}
 
 // ---------- recommendations from your own library ----------
 // Songs in your other playlists, by artists already in the target (or your top artists if it's empty).

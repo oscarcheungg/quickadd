@@ -53,7 +53,7 @@ function rowHTML(t, { mode = "plus", sub, trail, extra = "", cls = "" } = {}) {
   const inT = inTarget(t.uri), sel = isSelected(t.uri);
   const subText = sub ?? artists(t);
   let ctrl = "";
-  if (mode === "plus") ctrl = inT ? `<span class="plus done" title="Already in ${esc(target()?.name)}">✓</span>` : sel ? `<button class="plus pending" data-deselect="${esc(t.uri)}">✓</button>` : `<button class="plus" data-select="${esc(t.uri)}">+</button>`;
+  if (mode === "plus") ctrl = inT ? `<span class="plus done" title="Already in ${esc(target()?.name)}">✓</span>` : sel ? `<button class="plus pending" data-deselect="${esc(t.uri)}" title="Added — tap to undo">✓</button>` : `<button class="plus" data-select="${esc(t.uri)}" aria-label="Add">+</button>`;
   else if (mode === "check") ctrl = inT ? `<span class="check on disabled">✓</span>` : `<span class="check ${sel ? "on" : ""}">${sel ? "✓" : ""}</span>`;
   else if (mode === "review") ctrl = `<button class="x" data-remove="${esc(t.uri)}">✕</button>`;
   const trailHTML = trail ? `<span class="trail ${trail.cls || ""}">${esc(trail.text)}</span>` : (inT && mode !== "review" && mode !== "plain" ? `<span class="trail green">in ${esc(target()?.name)}</span>` : "");
@@ -154,7 +154,8 @@ function searchHTML() {
   return `${searchFieldHTML(q)}
     ${res.artists.length ? section("Artists") + `<div class="hscroll">${res.artists.map(a => `<button class="artist" data-open-catalog-artist="${esc(a.id)}"><div class="avatar">${a.image ? `<img src="${esc(a.image)}" alt="">` : esc(initials(a.name))}</div><div class="name">${esc(a.name)}</div></button>`).join("")}</div>` : ""}
     ${section(res.tracks.length ? `Songs · ${res.tracks.length}` : "Songs", selectable.length > 1 ? { id: "selectall", label: `Select all ${selectable.length}` } : null)}
-    <div id="catalog">${res.tracks.length ? res.tracks.map(t => rowHTML(t, { sub: artists(t) })).join("") : ready ? `<div class="empty">No results on Spotify for “${esc(q)}”.</div>` : `<div class="empty">Searching Spotify…</div>`}</div>`;
+    <div id="catalog">${res.tracks.length ? res.tracks.map(t => rowHTML(t, { sub: artists(t) })).join("") : ready ? `<div class="empty">No results on Spotify for “${esc(q)}”.</div>` : `<div class="empty">Searching Spotify…</div>`}</div>
+    ${ready && res.tracks.length >= 10 && !res.done ? `<div class="more"><button class="chip" data-action="more-results">${res.loading ? "Loading…" : "More results"}</button></div>` : ""}`;
 }
 function catalogArtistHTML() {
   const a = S.screen.artist; const tracks = S.screen.tracks || null;
@@ -246,7 +247,7 @@ $app.addEventListener("click", async (e) => {
   if (d.openCatalogArtist) {
     const a = S.catalog.artists.find(x => x.id === d.openCatalogArtist) || { id: d.openCatalogArtist, name: "Artist", image: "" };
     const screen = { name: "catalog-artist", artist: a, tracks: null }; go(screen);
-    D.artistTopTracks(a.id).then(tr => { if (S.screen === screen) { screen.tracks = tr; render(); } }).catch(err => { screen.tracks = []; render(); toast(err.message); });
+    D.artistTopTracks(a.id, a.name).then(tr => { if (S.screen === screen) { screen.tracks = tr; render(); } }).catch(err => { screen.tracks = []; render(); toast(err.message); });
     return;
   }
   if (d.setTarget) { setTarget(d.setTarget); S.sheet = null; S.selection = []; persistSel(); home(); return; }
@@ -273,6 +274,12 @@ $app.addEventListener("click", async (e) => {
     case "savekey": AI.setKey(document.getElementById("akey")?.value || ""); AI.resetClient(); S.sheet = null; S.ai.status = "idle"; render(); loadSuggestions(true); return;
     case "clearkey": AI.setKey(""); AI.resetClient(); S.sheet = null; S.ai = { status: "idle", items: [], error: "", forTarget: null, dismissed: new Set() }; return render();
     case "ai-refresh": return loadSuggestions(true);
+    case "more-results": {
+      const q = S.screen.q; if (S.catalog.loading) return; S.catalog.loading = true; render();
+      try { const more = await D.searchCatalog(q, S.catalog.tracks.length); if (S.catalogQ === q) { S.catalog.tracks.push(...more.filter(t => !S.catalog.tracks.some(x => x.uri === t.uri))); S.catalog.done = more.length < 10; } }
+      catch (err) { toast(err.message); } finally { S.catalog.loading = false; if (S.screen.name === "search") render(); }
+      return;
+    }
     case "clearq": S.screen = { name: "home" }; S.stack = []; render(); document.getElementById("q")?.focus(); return;
     case "selectall": {
       let tracks = [];
